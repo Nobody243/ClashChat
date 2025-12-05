@@ -1,0 +1,6 @@
+# Example key.properties - copy to android/key.properties and fill values
+# Do NOT commit android/key.properties to version control.
+storeFile=android/app/my-release-key.jks
+storePassword=CHANGEME_STORE_PASSWORD
+keyAlias=CHANGEME_ALIAS
+keyPassword=CHANGEME_KEY_PASSWORD
