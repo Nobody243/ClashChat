@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Connect Phone Wireless",
+            "type": "shell",
+            "command": "C:\\Users\\PC\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe connect 192.168.100.101:39727",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Flutter Run Chrome",
+            "type": "shell",
+            "command": "flutter",
+            "args": [
+                "run",
+                "-d",
+                "chrome"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "dart",
+            "command": "dart",
+            "cwd": "",
+            "args": [
+                "doc",
+                "."
+            ],
+            "problemMatcher": [],
+            "label": "dart: dart doc .",
+            "detail": ""
+        }
+    ]
+}
