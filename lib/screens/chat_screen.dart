@@ -1,0 +1,1078 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'results_screen.dart';
+import 'home_screen.dart';
+import '../core/app_colors.dart';
+import '../core/theme_provider.dart';
+import '../core/responsive_layout.dart';
+import '../models/chat_message.dart';
+import '../widgets/message_bubble.dart';
+import '../widgets/typing_indicator.dart';
+import '../widgets/chat_input_bar.dart';
+import '../services/ai_service.dart';
+import '../services/auth_service.dart';
+import '../services/timer_service.dart';
+import '../services/usage_quota_service.dart';
+import '../widgets/debate_timer_widget.dart';
+import '../models/rank_model.dart';
+import '../models/debate_mode.dart';
+
+class ChatScreen extends StatefulWidget {
+  final String topic;
+  final String stance;
+  final String difficulty;
+  final int? timerMinutes;
+  final DebateMode mode;
+
+  const ChatScreen({
+    super.key,
+    required this.topic,
+    required this.stance,
+    required this.difficulty,
+    this.timerMinutes,
+    required this.mode,
+  });
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen>
+    with SingleTickerProviderStateMixin {
+  final List<ChatMessage> _messages = [];
+  final TextEditingController _inputCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  bool _isAiTyping = false;
+  bool _isSending = false;
+  bool _isEnding = false;
+
+  late DebateTimerService _timerService;
+
+  late AnimationController _headerAnimCtrl;
+  late Animation<double> _headerFadeAnim;
+  late Animation<Offset> _headerSlideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _headerFadeAnim = CurvedAnimation(
+      parent: _headerAnimCtrl,
+      curve: Curves.easeIn,
+    );
+    _headerSlideAnim =
+        Tween<Offset>(begin: const Offset(0, -0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _headerAnimCtrl, curve: Curves.easeOutCubic),
+        );
+    _headerAnimCtrl.forward();
+
+    _timerService = DebateTimerService();
+    if (widget.timerMinutes != null) {
+      _timerService.start(
+        widget.timerMinutes!,
+        onExpired: () => _onTimerExpired(),
+      );
+    }
+
+    Future.delayed(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
+      setState(() => _isAiTyping = true);
+
+      final opener = await AiService.sendDebateMessage(
+        topic: widget.topic,
+        userStance: widget.stance,
+        history: [],
+        userMessage: 'Start the debate with a strong opening challenge.',
+        difficulty: widget.difficulty,
+        isLearningMode: widget.mode == DebateMode.learning,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isAiTyping = false;
+        _messages.add(opener);
+      });
+      _scrollToBottom();
+    });
+  }
+
+
+  void _onTimerExpired() {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("⏱️ Time's up! Calculating your score..."),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _scoreAndEndDebate();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timerService.dispose();
+    _inputCtrl.dispose();
+    _scrollCtrl.dispose();
+    _headerAnimCtrl.dispose();
+    super.dispose();
+  }
+
+  void _showExitDialog(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _ThemedDialog(
+        title: 'End debate?',
+        content: 'If you leave now the debate will be ended.',
+        actions: [('Cancel', null), ('End debate', Colors.red)],
+        onActionSelected: (index) async {
+          if (index == 1) {
+            Navigator.of(dialogContext).pop();
+            await _scoreAndEndDebate();
+          } else {
+            Navigator.of(dialogContext).pop(false);
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _completeDebateSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final sessionDoc = FirebaseFirestore.instance
+        .collection('debates')
+        .doc(user.uid)
+        .collection('session')
+        .doc('active');
+
+    await sessionDoc.set({
+      'status': 'completed',
+      'completedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'topic': widget.topic,
+      'stance': widget.stance,
+      'difficulty': widget.difficulty,
+      'mode': widget.mode.name,
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _sendMessage() async {
+    if (_isSending || _isAiTyping || _isEnding) return;
+
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty) return;
+
+    final currentUser = AuthService.currentUser;
+    if (currentUser == null) return;
+
+    // Immediately clear input controller so subsequent taps/keystrokes cannot resend
+    _inputCtrl.clear();
+
+    // Optimistic UI update: show message immediately (0ms delay)
+    final userMsg = ChatMessage(
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
+    );
+
+    setState(() {
+      _isSending = true;
+      _messages.add(userMsg);
+      _isAiTyping = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final quotaAvailable = await UsageQuotaService.consume(currentUser.uid);
+      if (!quotaAvailable) {
+        if (!mounted) return;
+        setState(() {
+          _messages.remove(userMsg);
+          _isAiTyping = false;
+          _isSending = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Daily usage exhausted. You have no debate uses left today.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      final priorHistory = _messages.length > 1
+          ? _messages.sublist(0, _messages.length - 1)
+          : const <ChatMessage>[];
+
+      // Call AI Service
+      final aiReply = await AiService.sendDebateMessage(
+        topic: widget.topic,
+        userStance: widget.stance,
+        history: priorHistory,
+        userMessage: text,
+        difficulty: widget.difficulty,
+        isLearningMode: widget.mode == DebateMode.learning,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isAiTyping = false;
+        _messages.add(aiReply);
+      });
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      if (mounted) {
+        setState(() => _isAiTyping = false);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _scoreAndEndDebate() async {
+    if (_isEnding) return;
+    setState(() => _isEnding = true);
+
+    final currentUser = AuthService.currentUser;
+    if (currentUser == null) {
+      setState(() => _isEnding = false);
+      return;
+    }
+
+    if (!await UsageQuotaService.consume(currentUser.uid)) {
+      if (!mounted) return;
+      setState(() => _isEnding = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Daily usage exhausted. You cannot generate a score right now.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final isDark = context.watch<ThemeProvider>().isDark;
+        return Dialog(
+          backgroundColor: AppColors.surf(isDark),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Analyzing Logic...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ).animate(onPlay: (ctrl) => ctrl.repeat(reverse: true)).fade(duration: 800.ms, begin: 0.5, end: 1.0),
+                const SizedBox(height: 8),
+                Text(
+                  'Generating personalized feedback',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: AppColors.textHint(isDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    final result = await AiService.scoreDebate(
+      topic: widget.topic,
+      userStance: widget.stance,
+      messages: _messages,
+      difficulty: widget.difficulty,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pop(); // close loading
+
+    debugPrint('📊 SCORE RESULT: ${result['score']} (Type: ${result['score'].runtimeType})');
+    debugPrint('📊 FULL RESULT: $result');
+
+    final finalScore = result['score'] is int
+        ? result['score'] as int
+        : int.tryParse(result['score'].toString()) ?? 65;
+    final strengths = (result['strengths'] as List?)?.map((item) => item.toString()).toList() ?? const <String>[];
+    final weaknesses = (result['weaknesses'] as List?)?.map((item) => item.toString()).toList() ?? const <String>[];
+    final summary = result['summary']?.toString() ?? 'Debate completed';
+
+    // Get current rank before updating points
+    String currentRank = 'Newcomer';
+    int pointsEarned = 0;
+    if (widget.mode == DebateMode.ranked) {
+      pointsEarned = RankModel.calculatePointsEarned(finalScore, true);
+      try {
+        final userDocRef = FirebaseFirestore.instance.collection('users').doc(currentUser.uid);
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final snapshot = await transaction.get(userDocRef);
+          if (!snapshot.exists) return;
+          final currentPoints = (snapshot.data()?['rankPoints'] as num?)?.toInt() ?? 0;
+          // Get rank at time BEFORE points update
+          final rankAtTime = RankModel.getRankFromPoints(currentPoints);
+          currentRank = RankModel.rankData[rankAtTime]!['name'] as String;
+          final newPoints = currentPoints + pointsEarned;
+          transaction.update(userDocRef, {'rankPoints': newPoints < 0 ? 0 : newPoints});
+        });
+      } catch (e) {
+        debugPrint('Error updating rank points: $e');
+      }
+    }
+
+    await _completeDebateSession();
+
+    // Calculate duration: use elapsed time if timer was running, otherwise estimate from messages
+    final int durationMinutes = widget.timerMinutes != null
+        ? _timerService.elapsedMinutes
+        : ((_messages.length * 2) / 60).ceil(); // estimate 2 seconds per message
+
+    debugPrint('💾 SAVING TO FIRESTORE - Score: $finalScore (Type: ${finalScore.runtimeType})');
+    debugPrint('⏱️ TIMER DURATION: $durationMinutes minutes');
+    await FirebaseFirestore.instance
+        .collection('debates')
+        .doc(currentUser.uid)
+        .collection('history')
+        .add({
+          'topic': widget.topic,
+          'stance': widget.stance,
+          'difficulty': widget.difficulty,
+          'score': finalScore,
+          'mode': widget.mode.name,
+          'summary': summary,
+          'strengths': strengths,
+          'weaknesses': weaknesses,
+          'messageCount': _messages.length,
+          'date': DateTime.now().toIso8601String(),
+          'status': 'completed',
+          'isRanked': widget.mode == DebateMode.ranked,
+          'pointsEarned': pointsEarned,
+          'timerMinutes': widget.timerMinutes,
+          'durationMinutes': durationMinutes,
+          'rankAtTime': currentRank,
+          'messages': _messages
+              .map(
+                (m) => {
+                  'text': m.text,
+                  'isUser': m.isUser,
+                  'timestamp': m.timestamp.toIso8601String(),
+                  'coachTip': m.coachTip,
+                },
+              )
+              .toList(),
+        });
+
+    if (!mounted) return;
+
+    if (widget.mode == DebateMode.learning) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+        (_) => false,
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+          builder: (context) {
+          debugPrint(
+            '🎯 FINAL SCORE FOR RESULTS SCREEN: $finalScore (Type: ${finalScore.runtimeType})',
+          );
+          debugPrint(
+            '🎯   Raw result score was: ${result['score']} (Type: ${result['score'].runtimeType})',
+          );
+          // Create a copy of messages to prevent clearing issues
+          final messagesCopy = List<ChatMessage>.from(_messages);
+          return ResultsScreen(
+            topic: widget.topic,
+            stance: widget.stance,
+            messages: messagesCopy,
+            score: finalScore,
+            strengths: List<String>.from(result['strengths'] ?? []),
+            weaknesses: List<String>.from(result['weaknesses'] ?? []),
+            summary: result['summary'] ?? '',
+            difficulty: widget.difficulty,
+            pointsEarned: pointsEarned,
+            mode: widget.mode,
+            isFromHistory: false,
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final stanceColor = widget.stance == 'For'
+        ? AppColors.success
+        : AppColors.error;
+    final bgStart = isDark
+        ? const Color(0xFF1A1A2E)
+        : AppColors.backgroundLight;
+    final bgEnd = isDark ? const Color(0xFF0F3460) : AppColors.surfaceDeepLight;
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _showExitDialog(context);
+      },
+      child: Scaffold(
+        appBar: isDesktop 
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight + 8),
+                child: FadeTransition(
+                  opacity: _headerFadeAnim,
+                  child: SlideTransition(
+                    position: _headerSlideAnim,
+                    child: AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        onPressed: () => _showExitDialog(context),
+                      ),
+                      title: Text(
+                        widget.topic,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary(isDark),
+                        ),
+                      ),
+                      actions: [
+                        if (widget.timerMinutes != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: DebateTimerWidget(timerService: _timerService),
+                          ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'end':
+                                _showExitDialog(context);
+                                break;
+                              case 'theme':
+                                context.read<ThemeProvider>().toggle();
+                                break;
+                              case 'pause':
+                                _timerService.isRunning
+                                    ? _timerService.pause()
+                                    : _timerService.resume();
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'end',
+                              child: Row(children: [
+                                Icon(Icons.stop_circle, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text('End Debate'),
+                              ]),
+                            ),
+                            PopupMenuItem(
+                              value: 'pause',
+                              child: Row(children: [
+                                Icon(
+                                  _timerService.isRunning
+                                      ? Icons.pause_circle
+                                      : Icons.play_circle,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(_timerService.isRunning ? 'Pause Timer' : 'Resume Timer'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'theme',
+                              child: Row(children: [
+                                Icon(Icons.brightness_6),
+                                SizedBox(width: 10),
+                                Text('Toggle Theme'),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight + 8),
+                child: FadeTransition(
+                  opacity: _headerFadeAnim,
+                  child: SlideTransition(
+                    position: _headerSlideAnim,
+                    child: AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        onPressed: () => _showExitDialog(context),
+                      ),
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.topic,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(isDark),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(top: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: stanceColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: stanceColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            child: Text(
+                              widget.stance,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: stanceColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        if (widget.timerMinutes != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: DebateTimerWidget(timerService: _timerService),
+                          ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'end':
+                                _showExitDialog(context);
+                                break;
+                              case 'theme':
+                                context.read<ThemeProvider>().toggle();
+                                break;
+                              case 'pause':
+                                _timerService.isRunning
+                                    ? _timerService.pause()
+                                    : _timerService.resume();
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'end',
+                              child: Row(children: [
+                                Icon(Icons.stop_circle, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text('End Debate'),
+                              ]),
+                            ),
+                            PopupMenuItem(
+                              value: 'pause',
+                              child: Row(children: [
+                                Icon(
+                                  _timerService.isRunning
+                                      ? Icons.pause_circle
+                                      : Icons.play_circle,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(_timerService.isRunning ? 'Pause Timer' : 'Resume Timer'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'theme',
+                              child: Row(children: [
+                                Icon(Icons.brightness_6),
+                                SizedBox(width: 10),
+                                Text('Toggle Theme'),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+        body: isDesktop 
+            ? _buildDesktopBody(isDark, stanceColor, bgStart, bgEnd)
+            : _buildMobileBody(isDark, stanceColor, bgStart, bgEnd),
+      ),
+    );
+  }
+
+  Widget _buildDesktopBody(bool isDark, Color stanceColor, Color bgStart, Color bgEnd) {
+    return Container(
+      color: AppColors.bg(isDark),
+      child: Stack(
+        children: [
+          if (isDark)
+            Positioned(
+              top: -150,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 0.5,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              // Main Chat Area
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            controller: _scrollCtrl,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            itemCount: _messages.length + (_isAiTyping ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _messages.length && _isAiTyping) {
+                                return const TypingIndicator();
+                              }
+                              final message = _messages[index];
+                              final prevMsg = index > 0 ? _messages[index - 1] : null;
+                              final isGrouped = prevMsg?.isUser == message.isUser;
+                              return MessageBubble(
+                                message: message,
+                                isGrouped: isGrouped,
+                                maxWidthFactor: 0.7,
+                              );
+                            },
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          child: ChatInputBar(
+                            controller: _inputCtrl,
+                            onSend: _sendMessage,
+                            enabled: !_isEnding,
+                            isSending: _isSending || _isAiTyping,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Right Sidebar: Stats and Topic Info
+              Container(
+                width: 320,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDeep : AppColors.surfaceDeepLight,
+                  border: Border(
+                    left: BorderSide(
+                      color: isDark ? const Color(0x1AFFFFFF) : AppColors.border(isDark),
+                    ),
+                  ),
+                ),
+                child: _buildDebateStatsPanel(isDark),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileBody(bool isDark, Color stanceColor, Color bgStart, Color bgEnd) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      color: AppColors.bg(isDark),
+      child: Stack(
+        children: [
+          if (isDark)
+            Positioned(
+              top: -150,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 0.5,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      itemCount: _messages.length + (_isAiTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _messages.length && _isAiTyping) {
+                          return const TypingIndicator();
+                        }
+                        final message = _messages[index];
+                        final prevMsg = index > 0 ? _messages[index - 1] : null;
+                        final isGrouped = prevMsg?.isUser == message.isUser;
+                        return MessageBubble(
+                          message: message,
+                          isGrouped: isGrouped,
+                        );
+                      },
+                    ),
+                  ),
+                  ChatInputBar(
+                    controller: _inputCtrl,
+                    onSend: _sendMessage,
+                    enabled: !_isEnding,
+                    isSending: _isSending || _isAiTyping,
+                  )
+                      .animate(delay: 300.ms)
+                      .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                      .slideY(
+                        begin: 0.1,
+                        duration: 400.ms,
+                        curve: Curves.easeOutExpo,
+                      ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebateStatsPanel(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Debate Stats',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(isDark),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surf(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Topic',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(isDark),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.topic,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      widget.stance == 'For' ? Icons.thumb_up : Icons.thumb_down,
+                      size: 18,
+                      color: widget.stance == 'For' ? AppColors.success : AppColors.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Stance: ${widget.stance}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.psychology,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Difficulty: ${widget.difficulty}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.timerMinutes != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Timer: ${widget.timerMinutes} min',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surf(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Progress',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(isDark),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      'Messages:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_messages.length}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.timerMinutes != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Time Remaining',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DebateTimerWidget(timerService: _timerService),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// Themed Dialog Widget
+// ══════════════════════════════════════════════════════════
+class _ThemedDialog extends StatelessWidget {
+  final String title;
+  final String content;
+  final List<(String, Color?)> actions;
+  final Future<void> Function(int)? onActionSelected;
+
+  const _ThemedDialog({
+    required this.title,
+    required this.content,
+    required this.actions,
+    this.onActionSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final textPrimary = AppColors.textPrimary(isDark);
+    final textSecondary = AppColors.textSecondary(isDark);
+
+    return Dialog(
+      backgroundColor: AppColors.surf(isDark),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              content,
+              style: GoogleFonts.poppins(fontSize: 14, color: textSecondary),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: List.generate(actions.length, (index) {
+                final (label, color) = actions[index];
+                return Padding(
+                  padding: EdgeInsets.only(left: index == 0 ? 0 : 12),
+                  child: TextButton(
+                    onPressed: () async {
+                      if (onActionSelected != null) {
+                        await onActionSelected!(index);
+                      } else {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: color ?? AppColors.primary,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
