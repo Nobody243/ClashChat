@@ -1,0 +1,22 @@
+<svg width="108" height="108" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <rect width="160" height="160" fill="#0e0e18"/>
+  <defs>
+    <clipPath id="L2"><rect x="0" y="0" width="80" height="160"/></clipPath>
+    <clipPath id="R2"><rect x="80" y="0" width="80" height="160"/></clipPath>
+  </defs>
+  <circle cx="80" cy="80" r="50" fill="#3C3489" clip-path="url(#L2)"/>
+  <circle cx="80" cy="80" r="50" fill="#0F6E56" clip-path="url(#R2)"/>
+  <ellipse cx="58" cy="70" rx="9" ry="11" fill="#CECBF6" clip-path="url(#L2)"/>
+  <ellipse cx="58" cy="69" rx="5" ry="6" fill="#26215C" clip-path="url(#L2)"/>
+  <ellipse cx="59" cy="68" rx="2" ry="2.5" fill="#EEEDFE" clip-path="url(#L2)"/>
+  <path d="M46 94 Q58 102 70 94" fill="none" stroke="#CECBF6" stroke-width="3.5" stroke-linecap="round" clip-path="url(#L2)"/>
+  <line x1="46" y1="56" x2="70" y2="60" stroke="#AFA9EC" stroke-width="2.5" stroke-linecap="round" clip-path="url(#L2)"/>
+  
+  <ellipse cx="102" cy="70" rx="9" ry="11" fill="#9FE1CB" clip-path="url(#R2)"/>
+  <ellipse cx="102" cy="69" rx="5" ry="6" fill="#04342C" clip-path="url(#R2)"/>
+  <ellipse cx="103" cy="68" rx="2" ry="2.5" fill="#E1F5EE" clip-path="url(#R2)"/>
+  <path d="M90 98 Q102 90 114 98" fill="none" stroke="#9FE1CB" stroke-width="3.5" stroke-linecap="round" clip-path="url(#R2)"/>
+  <line x1="90" y1="62" x2="114" y2="56" stroke="#5DCAA5" stroke-width="2.5" stroke-linecap="round" clip-path="url(#R2)"/>
+  
+  <rect x="77" y="22" width="6" height="116" fill="#0a0a0f"/>
+</svg>
