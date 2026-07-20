@@ -8,6 +8,7 @@ import 'results_screen.dart';
 import 'home_screen.dart';
 import '../core/app_colors.dart';
 import '../core/theme_provider.dart';
+import '../core/responsive_layout.dart';
 import '../models/chat_message.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
@@ -411,6 +412,7 @@ class _ChatScreenState extends State<ChatScreen>
             difficulty: widget.difficulty,
             pointsEarned: pointsEarned,
             mode: widget.mode,
+            isFromHistory: false,
           );
         },
       ),
@@ -427,6 +429,9 @@ class _ChatScreenState extends State<ChatScreen>
         ? const Color(0xFF1A1A2E)
         : AppColors.backgroundLight;
     final bgEnd = isDark ? const Color(0xFF0F3460) : AppColors.surfaceDeepLight;
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
 
     return PopScope(
       canPop: false,
@@ -434,159 +439,519 @@ class _ChatScreenState extends State<ChatScreen>
         if (!didPop) _showExitDialog(context);
       },
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight + 8),
-          child: FadeTransition(
-            opacity: _headerFadeAnim,
-            child: SlideTransition(
-              position: _headerSlideAnim,
-              child: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                  onPressed: () => _showExitDialog(context),
-                ),
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.topic,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary(isDark),
+        appBar: isDesktop 
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight + 8),
+                child: FadeTransition(
+                  opacity: _headerFadeAnim,
+                  child: SlideTransition(
+                    position: _headerSlideAnim,
+                    child: AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        onPressed: () => _showExitDialog(context),
                       ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.only(top: 3),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: stanceColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: stanceColor.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      child: Text(
-                        widget.stance,
+                      title: Text(
+                        widget.topic,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: stanceColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary(isDark),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  if (widget.timerMinutes != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: DebateTimerWidget(timerService: _timerService),
-                    ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'end':
-                          _showExitDialog(context);
-                          break;
-                        case 'theme':
-                          context.read<ThemeProvider>().toggle();
-                          break;
-                        case 'pause':
-                          _timerService.isRunning
-                              ? _timerService.pause()
-                              : _timerService.resume();
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'end',
-                        child: Row(children: [
-                          Icon(Icons.stop_circle, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text('End Debate'),
-                        ]),
-                      ),
-                      PopupMenuItem(
-                        value: 'pause',
-                        child: Row(children: [
-                          Icon(
-                            _timerService.isRunning
-                                ? Icons.pause_circle
-                                : Icons.play_circle,
-                            color: Colors.orange,
+                      actions: [
+                        if (widget.timerMinutes != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: DebateTimerWidget(timerService: _timerService),
                           ),
-                          const SizedBox(width: 10),
-                          Text(_timerService.isRunning ? 'Pause Timer' : 'Resume Timer'),
-                        ]),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'end':
+                                _showExitDialog(context);
+                                break;
+                              case 'theme':
+                                context.read<ThemeProvider>().toggle();
+                                break;
+                              case 'pause':
+                                _timerService.isRunning
+                                    ? _timerService.pause()
+                                    : _timerService.resume();
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'end',
+                              child: Row(children: [
+                                Icon(Icons.stop_circle, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text('End Debate'),
+                              ]),
+                            ),
+                            PopupMenuItem(
+                              value: 'pause',
+                              child: Row(children: [
+                                Icon(
+                                  _timerService.isRunning
+                                      ? Icons.pause_circle
+                                      : Icons.play_circle,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(_timerService.isRunning ? 'Pause Timer' : 'Resume Timer'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'theme',
+                              child: Row(children: [
+                                Icon(Icons.brightness_6),
+                                SizedBox(width: 10),
+                                Text('Toggle Theme'),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight + 8),
+                child: FadeTransition(
+                  opacity: _headerFadeAnim,
+                  child: SlideTransition(
+                    position: _headerSlideAnim,
+                    child: AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        onPressed: () => _showExitDialog(context),
                       ),
-                      const PopupMenuItem(
-                        value: 'theme',
-                        child: Row(children: [
-                          Icon(Icons.brightness_6),
-                          SizedBox(width: 10),
-                          Text('Toggle Theme'),
-                        ]),
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.topic,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(isDark),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(top: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: stanceColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: stanceColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            child: Text(
+                              widget.stance,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: stanceColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      actions: [
+                        if (widget.timerMinutes != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: DebateTimerWidget(timerService: _timerService),
+                          ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'end':
+                                _showExitDialog(context);
+                                break;
+                              case 'theme':
+                                context.read<ThemeProvider>().toggle();
+                                break;
+                              case 'pause':
+                                _timerService.isRunning
+                                    ? _timerService.pause()
+                                    : _timerService.resume();
+                                break;
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'end',
+                              child: Row(children: [
+                                Icon(Icons.stop_circle, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text('End Debate'),
+                              ]),
+                            ),
+                            PopupMenuItem(
+                              value: 'pause',
+                              child: Row(children: [
+                                Icon(
+                                  _timerService.isRunning
+                                      ? Icons.pause_circle
+                                      : Icons.play_circle,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(_timerService.isRunning ? 'Pause Timer' : 'Resume Timer'),
+                              ]),
+                            ),
+                            const PopupMenuItem(
+                              value: 'theme',
+                              child: Row(children: [
+                                Icon(Icons.brightness_6),
+                                SizedBox(width: 10),
+                                Text('Toggle Theme'),
+                              ]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+        body: isDesktop 
+            ? _buildDesktopBody(isDark, stanceColor, bgStart, bgEnd)
+            : _buildMobileBody(isDark, stanceColor, bgStart, bgEnd),
+      ),
+    );
+  }
+
+  Widget _buildDesktopBody(bool isDark, Color stanceColor, Color bgStart, Color bgEnd) {
+    return Container(
+      color: AppColors.bg(isDark),
+      child: Stack(
+        children: [
+          if (isDark)
+            Positioned(
+              top: -150,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 0.5,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      Colors.transparent,
                     ],
                   ),
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              // Main Chat Area
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            controller: _scrollCtrl,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            itemCount: _messages.length + (_isAiTyping ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _messages.length && _isAiTyping) {
+                                return const TypingIndicator();
+                              }
+                              final message = _messages[index];
+                              final prevMsg = index > 0 ? _messages[index - 1] : null;
+                              final isGrouped = prevMsg?.isUser == message.isUser;
+                              return MessageBubble(
+                                message: message,
+                                isGrouped: isGrouped,
+                                maxWidthFactor: 0.7,
+                              );
+                            },
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          child: ChatInputBar(controller: _inputCtrl, onSend: _sendMessage),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Right Sidebar: Stats and Topic Info
+              Container(
+                width: 320,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDeep : AppColors.surfaceDeepLight,
+                  border: Border(
+                    left: BorderSide(
+                      color: isDark ? const Color(0x1AFFFFFF) : AppColors.border(isDark),
+                    ),
+                  ),
+                ),
+                child: _buildDebateStatsPanel(isDark),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileBody(bool isDark, Color stanceColor, Color bgStart, Color bgEnd) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      color: AppColors.bg(isDark),
+      child: Stack(
+        children: [
+          if (isDark)
+            Positioned(
+              top: -150,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 0.5,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      itemCount: _messages.length + (_isAiTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _messages.length && _isAiTyping) {
+                          return const TypingIndicator();
+                        }
+                        final message = _messages[index];
+                        final prevMsg = index > 0 ? _messages[index - 1] : null;
+                        final isGrouped = prevMsg?.isUser == message.isUser;
+                        return MessageBubble(
+                          message: message,
+                          isGrouped: isGrouped,
+                        );
+                      },
+                    ),
+                  ),
+                  ChatInputBar(controller: _inputCtrl, onSend: _sendMessage)
+                      .animate(delay: 300.ms)
+                      .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                      .slideY(
+                        begin: 0.1,
+                        duration: 400.ms,
+                        curve: Curves.easeOutExpo,
+                      ),
                 ],
               ),
             ),
           ),
-        ),
-        body: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [bgStart, bgEnd],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebateStatsPanel(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Debate Stats',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(isDark),
             ),
           ),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollCtrl,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surf(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Topic',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(isDark),
+                    letterSpacing: 1.2,
                   ),
-                  itemCount: _messages.length + (_isAiTyping ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _messages.length && _isAiTyping) {
-                      return const TypingIndicator();
-                    }
-                    final message = _messages[index];
-                    final prevMsg = index > 0 ? _messages[index - 1] : null;
-                    final isGrouped = prevMsg?.isUser == message.isUser;
-                    return MessageBubble(
-                      message: message,
-                      isGrouped: isGrouped,
-                    );
-                  },
                 ),
-              ),
-              ChatInputBar(controller: _inputCtrl, onSend: _sendMessage)
-                  .animate(delay: 300.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
+                const SizedBox(height: 6),
+                Text(
+                  widget.topic,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(isDark),
                   ),
-            ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      widget.stance == 'For' ? Icons.thumb_up : Icons.thumb_down,
+                      size: 18,
+                      color: widget.stance == 'For' ? AppColors.success : AppColors.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Stance: ${widget.stance}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.psychology,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Difficulty: ${widget.difficulty}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.timerMinutes != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Timer: ${widget.timerMinutes} min',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surf(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Progress',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(isDark),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      'Messages:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_messages.length}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.timerMinutes != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Time Remaining',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DebateTimerWidget(timerService: _timerService),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

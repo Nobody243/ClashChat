@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../core/app_colors.dart';
+import '../core/responsive_layout.dart';
 import '../models/debate_record.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
@@ -201,14 +202,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
     return Scaffold(
       backgroundColor: AppColors.bg(isDark),
       body: SafeArea(
+        top: !isDesktop,
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: isDesktop ? 8 : 16,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -297,7 +304,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: isDesktop ? 12 : 20),
 
             // Main Content Stream
             Expanded(
@@ -348,12 +355,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: _buildStatsRow(filtered, isDark),
                       ),
 
-                      const SizedBox(height: 20),
+                      SizedBox(height: isDesktop ? 12 : 20),
 
                       // List of Debates
                       Expanded(
                         child: filtered.isEmpty
-                            ? _buildEmptyState(isDark)
+                            ? _buildEmptyState(isDark, isDesktop)
                             : ListView.separated(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
@@ -551,9 +558,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
-    return Center(
+  Widget _buildEmptyState(bool isDark, bool isDesktop) {
+    return Container(
+      alignment: isDesktop ? Alignment.topCenter : Alignment.center,
+      padding: isDesktop ? const EdgeInsets.only(top: 80) : EdgeInsets.zero,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(

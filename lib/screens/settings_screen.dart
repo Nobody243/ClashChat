@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../core/app_colors.dart';
 import '../core/theme_provider.dart';
+import '../core/responsive_layout.dart';
+import '../widgets/desktop_page_shell.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -13,6 +15,132 @@ class SettingsScreen extends StatelessWidget {
     final isDark = context.watch<ThemeProvider>().isDark;
     final textPrimary = AppColors.textPrimary(isDark);
     final textSecondary = AppColors.textSecondary(isDark);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
+    final isWideDesktop = screenWidth >= ResponsiveLayout.wideDesktopBreakpoint;
+
+    Widget settingsScroll({required EdgeInsets padding}) {
+      return SingleChildScrollView(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                  'Settings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: textPrimary,
+                  ),
+                )
+                .animate()
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+            const SizedBox(height: 28),
+
+            _SectionLabel(label: 'Appearance', textColor: textSecondary)
+                .animate(delay: 50.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+            const SizedBox(height: 10),
+            _SettingsTile(
+                  isDark: isDark,
+                  icon: isDark
+                      ? Icons.nightlight_round
+                      : Icons.wb_sunny_rounded,
+                  iconColor: isDark
+                      ? const Color(0xFF9B59B6)
+                      : const Color(0xFFFFA500),
+                  title: 'Dark Mode',
+                  titleColor: textPrimary,
+                  trailing: Switch.adaptive(
+                    value: isDark,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppColors.primary,
+                    onChanged: (_) => context.read<ThemeProvider>().toggle(),
+                  ),
+                )
+                .animate(delay: 100.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+
+
+            const SizedBox(height: 20),
+            _SectionLabel(label: 'About', textColor: textSecondary)
+                .animate(delay: 350.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+            const SizedBox(height: 10),
+            _SettingsTile(
+                  isDark: isDark,
+                  icon: Icons.info_outline_rounded,
+                  iconColor: AppColors.primary,
+                  title: 'App Version',
+                  titleColor: textPrimary,
+                  subtitle: '1.0.0',
+                  subtitleColor: textSecondary,
+                )
+                .animate(delay: 400.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+            const SizedBox(height: 8),
+            _SettingsTile(
+                  isDark: isDark,
+                  icon: Icons.privacy_tip_outlined,
+                  iconColor: AppColors.secondary,
+                  title: 'Privacy Policy',
+                  titleColor: textPrimary,
+                  onTap: () {},
+                )
+                .animate(delay: 450.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+            const SizedBox(height: 8),
+            _SettingsTile(
+                  isDark: isDark,
+                  icon: Icons.description_outlined,
+                  iconColor: AppColors.textSecondary(isDark),
+                  title: 'Terms of Service',
+                  titleColor: textPrimary,
+                  onTap: () {},
+                )
+                .animate(delay: 500.ms)
+                .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
+                .slideY(
+                  begin: 0.1,
+                  duration: 400.ms,
+                  curve: Curves.easeOutExpo,
+                ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      );
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
@@ -26,126 +154,23 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                    'Settings',
-                    style: GoogleFonts.poppins(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
+        top: !isDesktop,
+        child: isWideDesktop
+            ? DesktopPageShell(
+                maxWidth: 800,
+                child: settingsScroll(padding: EdgeInsets.zero),
+              )
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: settingsScroll(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: isDesktop ? 12 : 20,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
                   ),
-              const SizedBox(height: 28),
-
-              _SectionLabel(label: 'Appearance', textColor: textSecondary)
-                  .animate(delay: 50.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-              const SizedBox(height: 10),
-              _SettingsTile(
-                    isDark: isDark,
-                    icon: isDark
-                        ? Icons.nightlight_round
-                        : Icons.wb_sunny_rounded,
-                    iconColor: isDark
-                        ? const Color(0xFF9B59B6)
-                        : const Color(0xFFFFA500),
-                    title: 'Dark Mode',
-                    titleColor: textPrimary,
-                    trailing: Switch.adaptive(
-                      value: isDark,
-                      activeThumbColor: Colors.white,
-                      activeTrackColor: AppColors.primary,
-                      onChanged: (_) => context.read<ThemeProvider>().toggle(),
-                    ),
-                  )
-                  .animate(delay: 100.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-
-
-              const SizedBox(height: 20),
-              _SectionLabel(label: 'About', textColor: textSecondary)
-                  .animate(delay: 350.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-              const SizedBox(height: 10),
-              _SettingsTile(
-                    isDark: isDark,
-                    icon: Icons.info_outline_rounded,
-                    iconColor: AppColors.primary,
-                    title: 'App Version',
-                    titleColor: textPrimary,
-                    subtitle: '1.0.0',
-                    subtitleColor: textSecondary,
-                  )
-                  .animate(delay: 400.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-              const SizedBox(height: 8),
-              _SettingsTile(
-                    isDark: isDark,
-                    icon: Icons.privacy_tip_outlined,
-                    iconColor: AppColors.secondary,
-                    title: 'Privacy Policy',
-                    titleColor: textPrimary,
-                    onTap: () {},
-                  )
-                  .animate(delay: 450.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-              const SizedBox(height: 8),
-              _SettingsTile(
-                    isDark: isDark,
-                    icon: Icons.description_outlined,
-                    iconColor: AppColors.textSecondary(isDark),
-                    title: 'Terms of Service',
-                    titleColor: textPrimary,
-                    onTap: () {},
-                  )
-                  .animate(delay: 500.ms)
-                  .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
-                  .slideY(
-                    begin: 0.1,
-                    duration: 400.ms,
-                    curve: Curves.easeOutExpo,
-                  ),
-
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
+                ),
+              ),
       ),
     );
   }
