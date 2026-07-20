@@ -42,8 +42,8 @@ flutter pub get
 3. Set up environment variables:
 
 ```bash
-cp .env.example .env
-# Edit .env with your local values
+cp env.example env
+# Edit env with your local values
 ```
 
 4. Configure Firebase:
@@ -56,7 +56,7 @@ cp .env.example .env
 ### Important Security Notice
 
 Never commit secrets, API keys, or credentials to version control. This includes:
-- `.env` files
+- `env` files
 - `google-services.json` (Android)
 - `GoogleService-Info.plist` (iOS)
 - `lib/firebase_options.dart`
@@ -65,18 +65,32 @@ The repository's `.gitignore` is configured to exclude these files automatically
 
 ### Environment Variables Setup
 
-Use the provided `.env.example` as a template:
+Use the provided `env.example` as a template:
 
 ```bash
-cp .env.example .env
+cp env.example env
 ```
 
 Required environment variables:
+- `GOOGLE_WEB_CLIENT_ID`: Your Google OAuth client ID for web authentication.
+- `APP_SHARED_SECRET`: A lightweight secret for communication between the Flutter app and your debate proxy.
 
+#### Generating a Local App Shared Secret
+For local development, you should generate your own unique `APP_SHARED_SECRET` (e.g. via terminal):
+```bash
+openssl rand -hex 32
 ```
-GROQ_API_KEY=your_groq_api_key_here
-GOOGLE_WEB_CLIENT_ID=your_google_web_client_id_here
-```
+Save this value in your local `env` file.
+
+#### Setting up a Local Debate Proxy
+Because Groq API calls are routed through a server-side proxy for security and the production proxy is privately-hosted, you will need to host your own proxy for local development.
+
+Your local proxy only needs to:
+1. Receive incoming requests containing your custom `APP_SHARED_SECRET` in the `X-App-Secret` header to verify the call.
+2. Inject your personal `GROQ_API_KEY` into the authorization header.
+3. Forward the request payload to the Groq API completion endpoint and return the response.
+
+Once deployed or run locally, make sure to update the endpoint URL in your client code if you want to route to your local proxy.
 
 ### Continuous Integration / Production Secrets
 
@@ -85,7 +99,7 @@ All real secrets must be stored in your CI provider's secret store:
 ```yaml
 # Example GitHub Actions configuration
 env:
-  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET }}
   GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 ```
 
@@ -99,7 +113,7 @@ If sensitive data is accidentally committed and pushed:
 
 ```bash
 # Remove sensitive file from history
-git filter-repo --path .env --invert-paths
+git filter-repo --path env --path .env --invert-paths
 
 # Force-push after team coordination
 git push --force-with-lease origin main

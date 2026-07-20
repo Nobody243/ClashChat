@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/app_colors.dart';
 import '../core/theme_provider.dart';
+import '../core/responsive_layout.dart';
+import '../widgets/desktop_page_shell.dart';
 import '../models/rank_model.dart';
 import '../services/auth_service.dart';
 import '../widgets/rank_badge_widget.dart';
@@ -107,6 +109,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final uid = AuthService.currentUser?.uid ?? '';
     final email = AuthService.currentUser?.email ?? '';
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       decoration: BoxDecoration(
@@ -119,6 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       child: SafeArea(
+        top: !isDesktop,
         child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
@@ -164,13 +170,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return data['isRanked'] == true;
                 }).length;
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 20,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                Widget profileScroll({required EdgeInsets padding}) {
+                  return SingleChildScrollView(
+                    padding: padding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Header row
                       Row(
@@ -513,7 +517,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 );
-              },
+              }
+
+              final isWideDesktop = screenWidth >= ResponsiveLayout.wideDesktopBreakpoint;
+
+              if (isWideDesktop) {
+                return DesktopPageShell(
+                  maxWidth: 800,
+                  child: profileScroll(padding: EdgeInsets.zero),
+                );
+              }
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: profileScroll(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: isDesktop ? 12 : 20,
+                    ),
+                  ),
+                ),
+              );
+          },
             );
           },
         ),

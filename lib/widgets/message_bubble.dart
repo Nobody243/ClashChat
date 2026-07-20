@@ -9,10 +9,12 @@ import '../models/chat_message.dart';
 class MessageBubble extends StatefulWidget {
   final ChatMessage message;
   final bool isGrouped;
+  final double maxWidthFactor;
   const MessageBubble({
     super.key,
     required this.message,
     this.isGrouped = false,
+    this.maxWidthFactor = 0.78,
   });
 
   @override
@@ -59,7 +61,7 @@ class _MessageBubbleState extends State<MessageBubble>
           alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.78,
+              maxWidth: MediaQuery.of(context).size.width * widget.maxWidthFactor,
             ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),

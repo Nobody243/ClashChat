@@ -9,8 +9,8 @@ import '../models/chat_message.dart';
 
 class AiService {
   static const String _apiEndpoint =
-      'https://api.groq.com/openai/v1/chat/completions';
-  static final String _apiKey = dotenv.env['GROQ_API_KEY']!;
+      'https://clashchat-proxy.clashchat-proxy-2026.workers.dev/';
+  static final String _appSecret = dotenv.env['APP_SHARED_SECRET']!;
   static const String _model = 'llama-3.3-70b-versatile';
 
   static Future<ChatMessage> sendDebateMessage({
@@ -76,7 +76,10 @@ class AiService {
       final response = await http.post(
         Uri.parse(_apiEndpoint),
         headers: {
-          'Authorization': 'Bearer $_apiKey',
+          // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
+          // since it will be visible in the compiled web client. Its only purpose
+          // is to block casual/automated direct calls to the proxy endpoint.
+          'X-App-Secret': _appSecret,
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
@@ -224,7 +227,10 @@ Judge fairly for this difficulty level. Score now with ONLY the JSON object.
       final response = await http.post(
         Uri.parse(_apiEndpoint),
         headers: {
-          'Authorization': 'Bearer $_apiKey',
+          // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
+          // since it will be visible in the compiled web client. Its only purpose
+          // is to block casual/automated direct calls to the proxy endpoint.
+          'X-App-Secret': _appSecret,
           'Content-Type': 'application/json',
         },
         body: jsonEncode({

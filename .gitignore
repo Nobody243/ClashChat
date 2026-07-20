@@ -49,13 +49,13 @@ google-services.json
 GoogleService-Info.plist
 
 # Optional local-only setup files
-.env.example
 GITHUB_READY_CHECKLIST.md
 
 # Optional VS Code local tasks / device wiring
 .vscode/tasks.json
 
 # Environment files
+/env
 .env
 lib/firebase_options.dart
 local.properties
@@ -68,6 +68,7 @@ local.properties
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+.firebase/
 
 # Android signing and generated files
 android/key.properties

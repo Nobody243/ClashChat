@@ -9,11 +9,13 @@ import 'settings_screen.dart';
 import 'topic_screen.dart';
 import '../core/app_colors.dart';
 import '../core/theme_provider.dart';
+import '../core/responsive_layout.dart';
 import '../widgets/user_avatar.dart';
 import '../services/auth_service.dart';
 import '../services/usage_quota_service.dart';
 import '../models/rank_model.dart';
 import '../models/debate_mode.dart';
+import '../widgets/desktop_page_shell.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,7 +27,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _navIndex = 0;
-  final GlobalKey<_HomeBodyState> _homeBodyKey = GlobalKey<_HomeBodyState>();
 
   late AnimationController _fabAnimCtrl;
 
@@ -54,6 +55,23 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Use responsive layout for widths > 850px
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    if (screenWidth > ResponsiveLayout.desktopBreakpoint) {
+      return ResponsiveLayout(
+        currentIndex: _navIndex,
+        onNavigationChanged: _onNavTap,
+        screens: [
+          const _HomeBody(),
+          const HistoryScreen(),
+          const ProfileScreen(),
+          const SettingsScreen(),
+        ],
+      );
+    }
+    
+    // Mobile layout
     final isDark = context.watch<ThemeProvider>().isDark;
     return Scaffold(
       body: AnimatedSwitcher(
@@ -75,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen>
           1 => const HistoryScreen(),
           2 => const ProfileScreen(),
           3 => const SettingsScreen(),
-          _ => _HomeBody(key: _homeBodyKey),
+          _ => const _HomeBody(),
         },
       ),
       bottomNavigationBar: AnimatedContainer(
@@ -140,7 +158,7 @@ class _HomeBodyState extends State<_HomeBody>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _staggerAnims = List.generate(4, (i) {
+    _staggerAnims = List.generate(6, (i) {
       final start = i * 0.15;
       final end = (start + 0.55).clamp(0.0, 1.0);
       return CurvedAnimation(
@@ -174,6 +192,8 @@ class _HomeBodyState extends State<_HomeBody>
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
@@ -187,6 +207,7 @@ class _HomeBodyState extends State<_HomeBody>
         ),
       ),
       child: SafeArea(
+        top: !isDesktop,
         child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
@@ -200,123 +221,385 @@ class _HomeBodyState extends State<_HomeBody>
                 firestoreDisplayName ?? authDisplayName ?? 'Debater';
             final avatarSeed = data?['avatarSeed'] as String? ?? 'Felix';
             final points = data?['rankPoints'] ?? 0;
-          final quota = UsageQuotaService.fromData(data);
-          final isQuotaLocked = quota.isLocked;
+            final quota = UsageQuotaService.fromData(data);
+            final isQuotaLocked = quota.isLocked;
 
-            return CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _animated(
-                    0,
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                      child: _HeroCard(
-                        displayName: displayName,
-                        avatarSeed: avatarSeed,
-                      ),
+            final isWideDesktop = screenWidth >= 1024.0;
+
+            // Wide Desktop: Row layouts for cards and modes
+            if (isWideDesktop) {
+              return DesktopPageShell(
+                maxWidth: 1300,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _animated(
+                                0,
+                                _HeroCard(
+                                  displayName: displayName,
+                                  avatarSeed: avatarSeed,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _animated(
+                                1,
+                                RankBadgeWidget(points: points),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _animated(
+                                2,
+                                _UsageCard(quota: quota),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        Text(
+                          'Game Modes',
+                          style: GoogleFonts.poppins(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                        ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1, duration: 400.ms),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _animated(
+                                3,
+                                _ModeCard(
+                                  title: 'Casual Mode',
+                                  subtitle:
+                                      isQuotaLocked
+                                          ? 'Daily usage exhausted. Come back tomorrow for a fresh quota.'
+                                          : 'Practice with custom timers & difficulties. No points at risk.',
+                                  icon: Icons.coffee,
+                                  textalignment: TextAlign.left,
+                                  color: Colors.blue,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const TopicScreen(mode: DebateMode.casual),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _animated(
+                                4,
+                                _ModeCard(
+                                  title: 'Ranked Mode',
+                                  subtitle:
+                                      isQuotaLocked
+                                          ? 'Daily usage exhausted. Your next debate unlocks after reset.'
+                                          : '10 min fixed timer. Difficulty matches your rank. Win points to rank up!',
+                                  icon: Icons.emoji_events,
+                                  textalignment: TextAlign.left,
+                                  color: Colors.amber,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const TopicScreen(mode: DebateMode.ranked),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _animated(
+                                5,
+                                _ModeCard(
+                                  title: 'Learning Mode',
+                                  subtitle:
+                                      isQuotaLocked
+                                          ? 'Daily usage exhausted. Learning mode will reopen after reset.'
+                                          : 'Learn the art of debate. Get real-time feedback, tips, and logical coaching.',
+                                  icon: Icons.school_rounded,
+                                  textalignment: TextAlign.left,
+                                  color: const Color(0xFF0F6E56),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const TopicScreen(mode: DebateMode.learning),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+            // Desktop: Two-column layout
+            if (isDesktop) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left Column: Hero card, Rank, Usage
+                        Expanded(
+                          flex: 1,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _animated(
+                                  0,
+                                  _HeroCard(
+                                    displayName: displayName,
+                                    avatarSeed: avatarSeed,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                _animated(
+                                  1,
+                                  RankBadgeWidget(points: points),
+                                ),
+                                const SizedBox(height: 16),
+                                _animated(
+                                  2,
+                                  _UsageCard(quota: quota),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        // Right Column: Game Modes Grid
+                        Expanded(
+                          flex: 1,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Game Modes',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary(isDark),
+                                  ),
+                                ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1, duration: 400.ms),
+                                const SizedBox(height: 16),
+                                _animated(
+                                  3,
+                                  _ModeCard(
+                                    title: 'Casual Mode',
+                                    subtitle:
+                                        isQuotaLocked
+                                            ? 'Daily usage exhausted. Come back tomorrow for a fresh quota.'
+                                            : 'Practice with custom timers & difficulties. No points at risk.',
+                                    icon: Icons.coffee,
+                                    textalignment: TextAlign.left,
+                                    color: Colors.blue,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const TopicScreen(mode: DebateMode.casual),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _animated(
+                                  4,
+                                  _ModeCard(
+                                    title: 'Ranked Mode',
+                                    subtitle:
+                                        isQuotaLocked
+                                            ? 'Daily usage exhausted. Your next debate unlocks after reset.'
+                                            : '10 min fixed timer. Difficulty matches your rank. Win points to rank up!',
+                                    icon: Icons.emoji_events,
+                                    textalignment: TextAlign.left,
+                                    color: Colors.amber,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const TopicScreen(mode: DebateMode.ranked),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                _animated(
+                                  5,
+                                  _ModeCard(
+                                    title: 'Learning Mode',
+                                    subtitle:
+                                        isQuotaLocked
+                                            ? 'Daily usage exhausted. Learning mode will reopen after reset.'
+                                            : 'Learn the art of debate. Get real-time feedback, tips, and logical coaching.',
+                                    icon: Icons.school_rounded,
+                                    textalignment: TextAlign.left,
+                                    color: const Color(0xFF0F6E56),
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const TopicScreen(mode: DebateMode.learning),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                SliverToBoxAdapter(
-                  child: _animated(
-                    1,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: RankBadgeWidget(points: points),
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                SliverToBoxAdapter(
-                  child: _animated(
-                    2,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _UsageCard(quota: quota),
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                SliverToBoxAdapter(
-                  child: _animated(
-                    3,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _ModeCard(
-                        title: 'Casual Mode',
-                        subtitle:
-                            isQuotaLocked
-                                ? 'Daily usage exhausted. Come back tomorrow for a fresh quota.'
-                                : 'Practice with custom timers & difficulties. No points at risk.',
-                        icon: Icons.coffee,
-                        textalignment: TextAlign.right,
-                        color: Colors.blue,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const TopicScreen(mode: DebateMode.casual),
+              );
+            }
+
+            // Mobile: Single column layout
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        0,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                          child: _HeroCard(
+                            displayName: displayName,
+                            avatarSeed: avatarSeed,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                SliverToBoxAdapter(
-                  child: _animated(
-                    4,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _ModeCard(
-                        title: 'Ranked Mode',
-                        subtitle:
-                            isQuotaLocked
-                                ? 'Daily usage exhausted. Your next debate unlocks after reset.'
-                                : '10 min fixed timer. Difficulty matches your rank. Win points to rank up!',
-                        icon: Icons.emoji_events,
-                        textalignment: TextAlign.right,
-                        color: Colors.amber,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const TopicScreen(mode: DebateMode.ranked),
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        1,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: RankBadgeWidget(points: points),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        2,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _UsageCard(quota: quota),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        3,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _ModeCard(
+                            title: 'Casual Mode',
+                            subtitle:
+                                isQuotaLocked
+                                    ? 'Daily usage exhausted. Come back tomorrow for a fresh quota.'
+                                    : 'Practice with custom timers & difficulties. No points at risk.',
+                            icon: Icons.coffee,
+                            textalignment: TextAlign.right,
+                            color: Colors.blue,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TopicScreen(mode: DebateMode.casual),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                SliverToBoxAdapter(
-                  child: _animated(
-                    5,
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _ModeCard(
-                        title: 'Learning Mode',
-                        subtitle:
-                            isQuotaLocked
-                                ? 'Daily usage exhausted. Learning mode will reopen after reset.'
-                                : 'Learn the art of debate. Get real-time feedback, tips, and logical coaching.',
-                        icon: Icons.school_rounded,
-                        textalignment: TextAlign.right,
-                        color: const Color(0xFF0F6E56),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const TopicScreen(mode: DebateMode.learning),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        4,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _ModeCard(
+                            title: 'Ranked Mode',
+                            subtitle:
+                                isQuotaLocked
+                                    ? 'Daily usage exhausted. Your next debate unlocks after reset.'
+                                    : '10 min fixed timer. Difficulty matches your rank. Win points to rank up!',
+                            icon: Icons.emoji_events,
+                            textalignment: TextAlign.right,
+                            color: Colors.amber,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TopicScreen(mode: DebateMode.ranked),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    SliverToBoxAdapter(
+                      child: _animated(
+                        5,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: _ModeCard(
+                            title: 'Learning Mode',
+                            subtitle:
+                                isQuotaLocked
+                                    ? 'Daily usage exhausted. Learning mode will reopen after reset.'
+                                    : 'Learn the art of debate. Get real-time feedback, tips, and logical coaching.',
+                            icon: Icons.school_rounded,
+                            textalignment: TextAlign.right,
+                            color: const Color(0xFF0F6E56),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TopicScreen(mode: DebateMode.learning),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                  ],
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 40)),
-              ],
+              ),
             );
           },
         ),

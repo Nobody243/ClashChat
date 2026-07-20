@@ -1,148 +1,168 @@
 # ClashChat — Screen Design Descriptions
 
+This document describes all active user screens in the ClashChat Flutter application, detailing their layout, file locations, routing behavior, and features.
+
 ---
 
 ## 1. Splash Screen
 **File:** `lib/screens/splash_screen.dart`
 
-The entry point of the app. Displays the ClashChat logo and a Lottie animation (`ChatAi.json`) centered on a dark background with animated aurora blob shapes floating behind it. Once the animation completes, the screen fades out and transitions to the Login Screen.
+The entry point of the application. Displays the ClashChat logo and a centered Lottie animation (`ChatAi.json`) on a dark background with floating aurora background effects. Once the entry animation completes:
+- It checks `AuthService.isLoggedIn` and validates the user session via `SessionService.isSessionValid()`.
+- If logged in and valid, routes to the **Home Screen**.
+- Otherwise, routes to the **Login Screen**.
 
 ---
 
 ## 2. Login Screen
 **File:** `lib/screens/login_screen.dart`
 
-Always displayed in dark mode regardless of system settings. Features a rich decorative background: aurora color blobs, a subtle star field, an orbital glowing ring, and the ClashChat logo with a soft glow. A floating frosted card in the center hosts two tabs — **Login** and **Sign Up** — with email/password fields and a gradient action button. Tapping the button navigates directly to the Home Screen.
+The authentication hub, styled exclusively in a dark theme. Features an frosted central card containing two tabs:
+- **Login**: Email and password fields with a submission button.
+- **Sign Up**: Email, password, and display name fields.
+- **Social Sign-In**: Integrated Google Sign-In buttons styled consistently with dark semi-transparent borders.
+Upon successful auth, routes to the **Home Screen**.
 
 ---
 
-## 3. Home Screen
+## 3. Home Screen (Shell & Dashboard)
 **File:** `lib/screens/home_screen.dart`
 
-The main shell of the app. Contains a bottom **Navigation Bar** with four tabs:
+The primary navigation shell of the application. It contains a bottom navigation bar managing four screens:
+- **Home (Dashboard)** (`_HomeBody`): Displays the main game portal.
+- **History**: Pushes the list of past debates.
+- **Profile**: Displays user rank, stats, and settings.
+- **Settings**: App preferences and appearance.
 
-- **Home** — The debate setup page. Users scroll through 8 preset topic categories (Tech, Education, Society, Health, Politics, Environment, Economy, Culture), each shown as a selectable card. Below the categories, a text field lets the user type a custom topic. A **For / Against** segmented control (`StanceButton`) lets the user pick their stance. A floating action button labeled **"Start Debate"** launches the Chat Screen.
-- **History** — See History Screen.
-- **Profile** — See Profile Screen.
-- **Settings** — See Settings Screen.
-
-Tabs switch with an `AnimatedSwitcher` (no screen push).
+The core **Home Dashboard** contains:
+- **Hero Card** (`_HeroCard`): Shows the current user name and circular Dicebear avatar.
+- **Rank Badge** (`RankBadgeWidget`): Displays current rank points and competitive title (e.g. Newcomer, Debater, Orator, Grandmaster).
+- **Usage Card** (`_UsageCard`): Tracks the user's daily quota slots (restricting new games once exhausted).
+- **Game Modes**: Three cards routing to the start of a debate:
+  1. **Casual Mode**: Free practice with custom difficulty and timer constraints.
+  2. **Ranked Mode**: Competitive match with points on the line, difficulty matched to user rank, and fixed 10-minute timers.
+  3. **Learning Mode**: Coached mode providing constructive real-time debate analysis.
 
 ---
 
-## 4. Chat Screen
+## 4. Topic Screen
+**File:** `lib/screens/topic_screen.dart`
+
+First step in setting up a debate. Users choose a category or input a custom topic:
+- Displays 8 preset categories (Technology, Education, Society, Health, Politics, Environment, Economy, Culture) as responsive selectable cards.
+- Provides a custom text input field.
+- Navigates to the **Stance Screen** on confirmation.
+
+---
+
+## 5. Stance Screen
+**File:** `lib/screens/stance_screen.dart`
+
+Second step in setup. Users select their argument stance:
+- A segmented control allowing the selection of **For** or **Against**.
+- **Routing Logic**:
+  - **Learning Mode**: Navigates directly to the **Chat Screen** (with "Adaptable" difficulty).
+  - **Casual Mode**: Pushes to the **Debate Setup Screen**.
+  - **Ranked Mode**: Pushes to the **Ranked Setup Screen**.
+
+---
+
+## 6. Debate Setup Screen
+**File:** `lib/screens/debate_setup_screen.dart`
+
+Casual Mode setup. Allows players to configure details of their practice session:
+- **Difficulty Selection**: Cards for Easy (🌱), Medium (⚔️), and Hard (🔥).
+- **Timer Switch**: Toggle to enable a custom debate timer with a minutes slider.
+Tapping the action button launches the **Chat Screen**.
+
+---
+
+## 7. Ranked Setup Screen
+**File:** `lib/screens/ranked_setup_screen.dart`
+
+Ranked Mode preview. Displays competitive matchmaking parameters:
+- Displays current matchmaking details (opponent search status, fixed 10-minute timer constraint, and automatic difficulty matching the player's current rank).
+- Previews competitive points on the line.
+Tapping start launches the **Chat Screen**.
+
+---
+
+## 8. Chat Screen
 **File:** `lib/screens/chat_screen.dart`
 
-The live debate interface. The app bar shows the debate topic and the user's chosen stance as a colored badge. Messages appear as animated bubbles that slide in from their respective sides:
-
-- **User messages** — right-aligned, purple-to-gold gradient background.
-- **AI messages** — left-aligned, surface color.
-
-A **Typing Indicator** (three staggered bouncing dots) appears while the AI is "thinking." The bottom of the screen has a multi-line text input bar with an animated send button. An **"End"** button in the app bar closes the debate and pushes to the Results Screen.
+The interactive debate interface:
+- **App Bar**: Displays topic, current stance badge, and remaining timer.
+- **Message List**: Bubbles slide in on entry. User messages are right-aligned with a purple-to-gold gradient; AI replies are left-aligned on surface colors.
+- **Typing Indicator**: Shows bouncing dots while the AI endpoint processes.
+- **Learning Mode**: Underneath the AI counter-argument, a separate card highlights the AI debate coach's tips and feedback on the user's last message.
+Tapping **"End"** in the app bar triggers the final scoring and routes to the **Results Screen**.
 
 ---
 
-## 5. Results Screen
+## 9. Results Screen
 **File:** `lib/screens/results_screen.dart`
 
-Shown after ending a debate. Features:
-
-- A large animated **Score Arc** (`ScoreArcPainter`) — a 270° sweep arc with a purple-to-gold gradient that animates to the final score.
-- A row of three **Stat Cards** showing messages sent, score value, and stance.
-- Two **Feedback Sections** — one for Strengths and one for Areas to Improve — each displayed as a bulleted card.
-- Two full-width **Gradient Buttons** with a looping shimmer effect: **"Debate Again"** (goes back to Chat) and **"Home"** (returns to Home Screen).
+The review page displayed after scoring completes:
+- **Score Arc**: A circular gradient progress indicator painting the final debate score (0-100).
+- **Stat Cards**: Displays messages exchanged, final score, and stance.
+- **Feedback Lists**: Separate bulleted cards highlighting strengths and weaknesses/areas to improve.
+- **Actions**: Double gradient buttons to "Debate Again" or return "Home".
 
 ---
 
-## 6. History Screen
+## 10. History Screen
 **File:** `lib/screens/history_screen.dart`
 
-Accessed from the bottom navigation bar. Displays a list of past debates as **History Debate Cards**, each showing the topic, score badge (gradient pill), stance chip, and date. At the top, a **Summary Strip** shows three aggregate stats: total debates, average score, and wins (score ≥ 70). A filter icon opens a modal bottom sheet where the user can filter by stance (All / For / Against) and set a minimum score using a slider.
+Accessed from navigation. Displays past debate history:
+- **Summary Metrics**: Top strip listing total debates, average score, and wins (score ≥ 70).
+- **History Cards**: Interactive cards displaying topic, stance, score, and date. Tapping a card opens its details in the **Results Screen** in read-only history mode.
+- **Filter Sheet**: Bottom sheet modal to filter debates by stance and minimum score.
 
 ---
 
-## 7. Profile Screen
+## 11. Profile Screen
 **File:** `lib/screens/profile_screen.dart`
 
-Accessed from the bottom navigation bar. Shows a circular avatar with a placeholder icon, and **editable fields** for name, email, and bio. An **Edit / Done** toggle button in the app bar switches between view and edit mode. Three `StatChip` pills display total debates, wins, and average score.
-
-**Password Management:**
-- A "Change Password" tile in the Account section
-- Checks the `isGoogleSignIn` Firestore flag to determine routing:
-  - **If true (Google user without password):** Routes to `CreatePasswordScreen`
-  - **If false (email user or Google user with password):** Routes to `ChangePasswordScreen`
-
-A logout tile at the bottom navigates back to the Login Screen.
+Accessed from navigation. Displays user account info and credentials setup:
+- Displays circular Dicebear avatar, display name, email, and bio.
+- **Stats Chips**: Displays profile statistics matching History (total debates, average score, wins).
+- **Edit Mode**: Allows updating display name and bio directly in Firestore.
+- **Password Check**: Clicking "Change Password" checks if `isGoogleSignIn` is true. If true, routes to **Create Password Screen**; if false, routes to **Change Password Screen**.
 
 ---
 
-## 8. Create Password Screen
+## 12. Avatar Picker Screen
+**File:** `lib/screens/avatar_picker_screen.dart`
+
+Accessed by tapping the avatar in edit mode:
+- Allows selecting or randomizing custom Dicebear seed words.
+- Displays responsive preview cards of the generated SVG avatars.
+- Updates the seed back in the profile document upon selection.
+
+---
+
+## 13. Create Password Screen
 **File:** `lib/screens/create_password_screen.dart`
 
-Exclusive to Google sign-in users who haven't set a password yet. Accessed via Profile Screen → Change Password (when `isGoogleSignIn` is true).
-
-**Features:**
-- **App Bar:** "Create password" title with back button
-- **Form Fields:**
-  - New Password field (password input with visibility toggle)
-    - Validation: Minimum 8 characters, at least one uppercase letter, at least one number
-  - Confirm Password field (password input with visibility toggle)
-    - Validation: Must match the new password
-  - Errors display only after attempting form submission
-
-**Functionality:**
-- **Submit Button:** "Create Password" button with gradient styling
-  - Validates form on tap
-  - Updates Firebase Auth password using `user.updatePassword()`
-  - Updates Firestore `isGoogleSignIn` flag to `false` (marks user as having password)
-  - Shows success SnackBar
-  - Navigates back to Profile Screen
-  - Loading state displayed during submission
-
-**Error Handling:**
-- Displays Firebase Auth errors (e.g., weak password)
-- User-friendly error messages in SnackBars
-- Graceful handling of user not found scenarios
+Allows Google Sign-In users who have not yet configured a password to add credentials for email logins:
+- Validates password guidelines (minimum 8 characters, 1 uppercase letter, 1 number).
+- Updates password in Firebase Auth and flips the `isGoogleSignIn` Firestore flag to false.
 
 ---
 
-## 9. Change Password Screen
+## 14. Change Password Screen
 **File:** `lib/screens/change_password_screen.dart`
 
-For email/password users or Google sign-in users who have already created a password (when `isGoogleSignIn` is false).
-
-**Features:**
-- **App Bar:** "Change password" title with back button
-- **Form Fields:**
-  - Current Password field (password input with visibility toggle)
-    - Used to verify user identity before allowing change
-  - New Password field (password input with visibility toggle)
-    - Same validation as CreatePasswordScreen
-  - Confirm New Password field (password input with visibility toggle)
-    - Must match new password
-  - Errors display only after attempting form submission
-
-**Functionality:**
-- **Submit Button:** "Update Password" button with gradient styling
-  - Validates all fields on tap
-  - Verifies current password (requires reauthentication with Firebase)
-  - Updates Firebase Auth password
-  - Shows success SnackBar
-  - Navigates back to Profile Screen
-  - Loading state displayed during submission
-
-**Error Handling:**
-- "Current password is incorrect" message if verification fails
-- Firebase Auth errors displayed appropriately
-- Handles user not found or auth state issues
+Allows standard email/password users to change passwords:
+- Validates current password via Firebase reauthentication.
+- Validates and updates the new password.
 
 ---
 
-## 10. Settings Screen
+## 15. Settings Screen
 **File:** `lib/screens/settings_screen.dart`
 
-Accessed from the bottom navigation bar. Organized into sections:
-
-- **Appearance** — Functional **Dark Mode** toggle wired to `ThemeProvider`.
-- **Preferences** — Notifications switch, Sound Effects switch, Debate Timer selector (currently stub values).
-- **About** — App Version, Privacy Policy link, Terms of Service link.
+Accessed from navigation. Features options for:
+- **Appearance**: Dark Mode toggle changing themes dynamically via `ThemeProvider`.
+- **Preferences**: Switches for notifications, sound, and timers (currently stubs).
+- **About**: Displays version metrics and links to terms/privacy policies.
