@@ -23,43 +23,52 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final allAvatarSeeds = kAvatars.map((a) => a.seed).toList(growable: false);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = screenWidth < 600
+        ? 3
+        : (screenWidth < 900 ? 5 : 6);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Choose your avatar')),
-      body: Column(
-        children: [
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(24),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: allAvatarSeeds.length,
+                  itemBuilder: (_, i) {
+                    final avatar = kAvatars[i];
+                    return AvatarCard(
+                      avatar: avatar,
+                      isSelected: _selected == avatar.seed,
+                      onTap: () => setState(() => _selected = avatar.seed),
+                    );
+                  },
+                ),
               ),
-              itemCount: allAvatarSeeds.length,
-              itemBuilder: (_, i) {
-                final avatar = kAvatars[i];
-                return AvatarCard(
-                  avatar: avatar,
-                  isSelected: _selected == avatar.seed,
-                  onTap: () => setState(() => _selected = avatar.seed),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-            child: FilledButton(
-              onPressed: _selected == null
-                  ? null
-                  : () => Navigator.pop(context, _selected),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                child: FilledButton(
+                  onPressed: _selected == null
+                      ? null
+                      : () => Navigator.pop(context, _selected),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  child: const Text('Confirm'),
+                ),
               ),
-              child: const Text('Confirm'),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

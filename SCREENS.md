@@ -37,7 +37,7 @@ The primary navigation shell of the application. It contains a bottom navigation
 The core **Home Dashboard** contains:
 - **Hero Card** (`_HeroCard`): Shows the current user name and circular Dicebear avatar.
 - **Rank Badge** (`RankBadgeWidget`): Displays current rank points and competitive title (e.g. Newcomer, Debater, Orator, Grandmaster).
-- **Usage Card** (`_UsageCard`): Tracks the user's daily quota slots (restricting new games once exhausted).
+- **Usage Card** (`_UsageCard`): Tracks the user's daily quota slots of 40 debates (restricting new games once exhausted).
 - **Game Modes**: Three cards routing to the start of a debate:
   1. **Casual Mode**: Free practice with custom difficulty and timer constraints.
   2. **Ranked Mode**: Competitive match with points on the line, difficulty matched to user rank, and fixed 10-minute timers.

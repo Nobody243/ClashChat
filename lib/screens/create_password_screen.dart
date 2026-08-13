@@ -116,9 +116,12 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
         title: const Text('Create password'),
         leading: const BackButton(),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,6 +228,8 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

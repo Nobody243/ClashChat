@@ -282,30 +282,33 @@ class _LoginScreenState extends State<LoginScreen>
                   child: Transform.translate(
                     offset: Offset.zero,
                     child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 22,
-                          vertical: 32,
-                        ),
-                        child: _AuthCard(
-                          tab: _tab,
-                          onSwitchTab: (i) {
-                            if (i != _tab) setState(() => _tab = i);
-                          },
-                          loginEmail: _loginEmail,
-                          loginPass: _loginPass,
-                          obscureLogin: _obscureLogin,
-                          onToggleLogin: () =>
-                              setState(() => _obscureLogin = !_obscureLogin),
-                          signupName: _signupName,
-                          signupEmail: _signupEmail,
-                          signupPass: _signupPass,
-                          obscureSignup: _obscureSignup,
-                          onToggleSignup: () =>
-                              setState(() => _obscureSignup = !_obscureSignup),
-                          onLoginTap: _handleLogin,
-                          onSignupTap: _handleSignup,
-                          glowAnim: _glow,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 32,
+                          ),
+                          child: _AuthCard(
+                            tab: _tab,
+                            onSwitchTab: (i) {
+                              if (i != _tab) setState(() => _tab = i);
+                            },
+                            loginEmail: _loginEmail,
+                            loginPass: _loginPass,
+                            obscureLogin: _obscureLogin,
+                            onToggleLogin: () =>
+                                setState(() => _obscureLogin = !_obscureLogin),
+                            signupName: _signupName,
+                            signupEmail: _signupEmail,
+                            signupPass: _signupPass,
+                            obscureSignup: _obscureSignup,
+                            onToggleSignup: () =>
+                                setState(() => _obscureSignup = !_obscureSignup),
+                            onLoginTap: _handleLogin,
+                            onSignupTap: _handleSignup,
+                            glowAnim: _glow,
+                          ),
                         ),
                       ),
                     ),

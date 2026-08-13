@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme_provider.dart';
+import '../widgets/desktop_page_shell.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -204,20 +205,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final isDark = context.watch<ThemeProvider>().isDark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
-    return Scaffold(
-      backgroundColor: AppColors.bg(isDark),
-      body: SafeArea(
-        top: !isDesktop,
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: isDesktop ? 8 : 16,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final isWideDesktop = screenWidth >= ResponsiveLayout.wideDesktopBreakpoint;
+    final double paddingX = isWideDesktop ? 0 : 24;
+
+    Widget content = Column(
+      children: [
+        // Header
+        Padding(
+          padding: EdgeInsets.only(
+            left: paddingX,
+            right: paddingX,
+            top: isDesktop ? 8 : 16,
+            bottom: isDesktop ? 8 : 16,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'History',
@@ -246,7 +248,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // Tab Switcher
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: paddingX),
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
@@ -351,7 +353,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       // Stats Row
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: EdgeInsets.symmetric(horizontal: paddingX),
                         child: _buildStatsRow(filtered, isDark),
                       ),
 
@@ -362,8 +364,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: filtered.isEmpty
                             ? _buildEmptyState(isDark, isDesktop)
                             : ListView.separated(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: paddingX,
                                   vertical: 8,
                                 ),
                                 itemCount: filtered.length,
@@ -447,9 +449,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
+
+        return Scaffold(
+          backgroundColor: AppColors.bg(isDark),
+          body: SafeArea(
+            top: !isDesktop,
+            child: isWideDesktop
+                ? DesktopPageShell(
+                    maxWidth: 800,
+                    child: content,
+                  )
+                : Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800),
+                      child: content,
+                    ),
+                  ),
+          ),
+        );
   }
 
   Widget _buildStatsRow(List<DebateRecord> records, bool isDark) {

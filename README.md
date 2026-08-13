@@ -45,7 +45,7 @@ ClashChat is a portfolio/learning project demonstrating:
 - Firestore-backed user profiles and debate records
 - AI scoring and chat via Groq API integration (routed securely via proxy)
 - Dicebear avatar seeds rendered as SVG
-- Daily per-user usage quota (client-enforced for demo)
+- Daily per-user usage quota of 40 debates (client-enforced for demo)
 - Dark/Light theme with smooth transitions
 - Debate history with filtering capabilities
 - 24-hour session management

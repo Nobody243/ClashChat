@@ -10,6 +10,7 @@ import '../widgets/score_arc_painter.dart';
 import '../widgets/feedback_section.dart';
 import '../widgets/result_stat_card.dart';
 import '../widgets/gradient_button.dart';
+import '../core/responsive_layout.dart';
 import '../models/debate_mode.dart';
 
 class ResultsScreen extends StatefulWidget {
@@ -143,6 +144,8 @@ class _ResultsScreenState extends State<ResultsScreen>
     final bgEnd = isDark ? const Color(0xFF16213E) : AppColors.surfaceDeepLight;
     final textPrimary = AppColors.textPrimary(isDark);
     final textHint = AppColors.textHint(isDark);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > ResponsiveLayout.desktopBreakpoint;
 
     return Scaffold(
       appBar: AppBar(
@@ -210,11 +213,16 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 900 : double.infinity,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                 // Header
                 FadeTransition(
                   opacity: _headerFade,
@@ -675,6 +683,8 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
         ),
       ),
+    ),
+    ),
     );
   }
 

@@ -6,6 +6,7 @@ import '../core/app_colors.dart';
 import '../core/theme_provider.dart';
 import '../core/responsive_layout.dart';
 import '../widgets/desktop_page_shell.dart';
+import '../widgets/setup_back_button.dart';
 import 'stance_screen.dart';
 import '../models/debate_mode.dart';
 
@@ -325,6 +326,8 @@ class _TopicScreenState extends State<TopicScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SetupBackButton(),
+            const SizedBox(height: 24),
             // Header
             Text(
               'Choose Your Topic',

@@ -19,7 +19,7 @@ class UsageQuotaState {
 }
 
 class UsageQuotaService {
-  static const int defaultDailyLimit = 20;
+  static const int defaultDailyLimit = 40;
   static const String _limitField = 'dailyUsageLimit';
   static const String _usedField = 'dailyUsageUsed';
   static const String _dayField = 'dailyUsageDayKey';

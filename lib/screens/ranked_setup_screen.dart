@@ -9,6 +9,7 @@ import '../models/rank_model.dart';
 import '../services/auth_service.dart';
 import 'chat_screen.dart';
 import '../models/debate_mode.dart';
+import '../widgets/setup_back_button.dart';
 
 class RankedSetupScreen extends StatelessWidget {
   final String topic;
@@ -213,6 +214,8 @@ class RankedSetupScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SetupBackButton(),
+            const SizedBox(height: 24),
             Text(
               'Ranked Match Setup',
               style: GoogleFonts.poppins(

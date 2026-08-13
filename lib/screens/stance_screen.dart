@@ -7,6 +7,7 @@ import '../core/theme_provider.dart';
 import '../core/responsive_layout.dart';
 import '../widgets/desktop_page_shell.dart';
 import '../widgets/stance_button.dart';
+import '../widgets/setup_back_button.dart';
 import 'debate_setup_screen.dart';
 import 'ranked_setup_screen.dart';
 import 'chat_screen.dart';
@@ -185,6 +186,8 @@ class _StanceScreenState extends State<StanceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SetupBackButton(),
+            const SizedBox(height: 24),
             Text(
               'Choose Your Stance',
               style: GoogleFonts.poppins(
