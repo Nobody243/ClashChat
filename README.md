@@ -21,7 +21,7 @@ If you are accessing the web version using a browser with aggressive built-in pr
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
+- [Running Locally](#running-locally)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Architecture](#architecture)
@@ -61,25 +61,39 @@ ClashChat is a portfolio/learning project demonstrating:
 - Firebase project setup
 - APP_SHARED_SECRET (configured in local env)
 
-## Installation
+## Running Locally
+
+This repo does not include Firebase configuration files (`lib/firebase_options.dart`, 
+`android/app/google-services.json`) since they're tied to the developer's own Firebase 
+project and API keys.
+
+To run this project yourself:
 
 1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/clashchat.git
+   cd clashchat
+   ```
+2. Create your own Firebase project at https://console.firebase.google.com
+3. Install the FlutterFire CLI:
+   ```bash
+   dart pub global activate flutterfire_cli
+   ```
+4. Run the configure command from the project root and follow the prompts to link your Firebase project:
+   ```bash
+   flutterfire configure
+   ```
+   This generates `lib/firebase_options.dart` with your own credentials.
+5. Enable **Authentication** (Email/Password & Google Sign-In) and **Firestore** in your Firebase project console — these are required for the app to function.
+6. If building for Android, download `google-services.json` from your Firebase project settings and place it in `android/app/`.
+7. Install dependencies and run:
+   ```bash
+   flutter pub get
+   flutter run
+   ```
 
-```bash
-git clone https://github.com/yourusername/clashchat.git
-cd clashchat
-```
-
-2. Install Flutter dependencies:
-
-```bash
-flutter pub get
-```
-
-3. Configure Firebase:
-   - Create a Firebase project at https://console.firebase.google.com
-   - Enable Email/Password and Google Sign-In authentication methods
-   - Download and configure platform-specific configuration files
+> [!NOTE]
+> The AI chat feature uses the Groq API via a Cloudflare Worker proxy. You'll need your own Groq API key and your own proxy setup for that feature to work — the deployed proxy is tied to the maintainer's account.
 
 ## Configuration
 
