@@ -187,7 +187,7 @@ lib/
 ### Key Components
 
 - **AuthService**: Handles Firebase Authentication and Google Sign-In
-- **AIService**: Manages AI conversation and scoring
+- **AIService**: Manages AI conversation and scoring with multi-model fallback support (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `groq/compound`)
 - **SessionService**: Manages 24-hour user sessions
 - **ThemeProvider**: Manages dark/light theme state
 
@@ -196,10 +196,10 @@ lib/
 For security, Groq API calls are not made directly from the client. Instead, they route through a separate, privately-hosted server-side proxy to protect API keys:
 
 ```
-[Flutter App] --(APP_SHARED_SECRET)--> [Server-side Proxy] --(GROQ_API_KEY)--> [Groq API]
+[Flutter App] --(APP_SHARED_SECRET)--> [Server-side Proxy] --(GROQ_API_KEY)--> [Groq API (gpt-oss-120b / fallback)]
 ```
 
-The `APP_SHARED_SECRET` acts as a lightweight abuse deterrent at the proxy level.
+The `APP_SHARED_SECRET` acts as a lightweight abuse deterrent at the proxy level. AIService automatically cycles through verified active models on failover.
 
 ### Responsive Layout Support
 

@@ -11,7 +11,56 @@ class AiService {
   static const String _apiEndpoint =
       'https://clashchat-proxy.clashchat-proxy-2026.workers.dev/';
   static final String _appSecret = dotenv.env['APP_SHARED_SECRET']!;
-  static const String _model = 'llama-3.3-70b-versatile';
+  
+  static const List<String> _models = [
+    'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
+    'groq/compound',
+  ];
+
+  static Future<http.Response?> _postWithFallback(
+    List<Map<String, String>> messages, {
+    int maxTokens = 500,
+    double temperature = 0.7,
+  }) async {
+    for (final model in _models) {
+      try {
+        final response = await http.post(
+          Uri.parse(_apiEndpoint),
+          headers: {
+            // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
+            // since it will be visible in the compiled web client. Its only purpose
+            // is to block casual/automated direct calls to the proxy endpoint.
+            'X-App-Secret': _appSecret,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': messages,
+            'max_tokens': maxTokens,
+            'temperature': temperature,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          return response;
+        } else {
+          debugPrint('GROQ ERROR ($model): ${response.statusCode} - ${response.body}');
+        }
+      } catch (e) {
+        debugPrint('GROQ REQUEST ERROR ($model): $e');
+      }
+    }
+    return null;
+  }
+
+  static String _cleanAiText(String text) {
+    // Remove thinking tags if present
+    final cleaned = text
+        .replaceAll(RegExp(r'<think>[\s\S]*?<\/think>', caseSensitive: false), '')
+        .trim();
+    return cleaned.isNotEmpty ? cleaned : text.trim();
+  }
 
   static Future<ChatMessage> sendDebateMessage({
     required String topic,
@@ -73,30 +122,21 @@ class AiService {
         },
       ];
 
-      final response = await http.post(
-        Uri.parse(_apiEndpoint),
-        headers: {
-          // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
-          // since it will be visible in the compiled web client. Its only purpose
-          // is to block casual/automated direct calls to the proxy endpoint.
-          'X-App-Secret': _appSecret,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': _model,
-          'messages': messages,
-          'max_tokens': 500,
-          'temperature': 0.7,
-        }),
+      final response = await _postWithFallback(
+        messages,
+        maxTokens: 500,
+        temperature: 0.7,
       );
 
-      if (response.statusCode == 200) {
+      if (response != null && response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final content = data['choices'][0]['message']['content'] as String?;
+        final rawContent = data['choices'][0]['message']['content'] as String?;
         
-        if (content == null) {
+        if (rawContent == null) {
           return ChatMessage(text: 'Let me think about that...', isUser: false, timestamp: DateTime.now());
         }
+
+        final content = _cleanAiText(rawContent);
 
         if (isLearningMode) {
           try {
@@ -119,11 +159,10 @@ class AiService {
         
         return ChatMessage(text: content, isUser: false, timestamp: DateTime.now());
       } else {
-        debugPrint('GROQ ERROR: ${response.statusCode} - ${response.body}');
         return ChatMessage(text: 'Connection error. Please try again.', isUser: false, timestamp: DateTime.now());
       }
     } catch (e) {
-      debugPrint('GROQ ERROR: $e');
+      debugPrint('AI Service Error: $e');
       return ChatMessage(text: 'Connection error. Please try again.', isUser: false, timestamp: DateTime.now());
     }
   }
@@ -224,31 +263,21 @@ RETURN VALID JSON ONLY (no other text):
 Judge fairly for this difficulty level. Score now with ONLY the JSON object.
 ''';
 
-      final response = await http.post(
-        Uri.parse(_apiEndpoint),
-        headers: {
-          // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
-          // since it will be visible in the compiled web client. Its only purpose
-          // is to block casual/automated direct calls to the proxy endpoint.
-          'X-App-Secret': _appSecret,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': _model,
-          'messages': [
-            {'role': 'user', 'content': prompt},
-          ],
-          'max_tokens': 500,
-          'temperature': 0.4,
-        }),
+      final response = await _postWithFallback(
+        [
+          {'role': 'user', 'content': prompt},
+        ],
+        maxTokens: 500,
+        temperature: 0.4,
       );
 
-      if (response.statusCode == 200) {
+      if (response != null && response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text = data['choices'][0]['message']['content'] as String?;
-        debugPrint('✅ API RESPONSE TEXT: "$text"');
+        final rawText = data['choices'][0]['message']['content'] as String?;
+        debugPrint('✅ API RESPONSE TEXT: "$rawText"');
 
-        if (text != null && text.isNotEmpty) {
+        if (rawText != null && rawText.isNotEmpty) {
+          final text = _cleanAiText(rawText);
           try {
             final jsonStart = text.indexOf('{');
             final jsonEnd = text.lastIndexOf('}') + 1;
@@ -306,9 +335,6 @@ Judge fairly for this difficulty level. Score now with ONLY the JSON object.
         } else {
           debugPrint('⚠️ Empty API response text');
         }
-      } else {
-        debugPrint('❌ GROQ HTTP ERROR: ${response.statusCode}');
-        debugPrint('   Response: ${response.body}');
       }
 
       debugPrint('⚠️ FALLING BACK TO HARDCODED SCORE: 65');
