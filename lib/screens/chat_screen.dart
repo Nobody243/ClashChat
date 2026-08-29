@@ -47,6 +47,7 @@ class _ChatScreenState extends State<ChatScreen>
   final TextEditingController _inputCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   bool _isAiTyping = false;
+  bool _isSending = false;
   bool _isEnding = false;
 
   late DebateTimerService _timerService;
@@ -170,47 +171,79 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _sendMessage() async {
+    if (_isSending || _isAiTyping || _isEnding) return;
+
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
 
     final currentUser = AuthService.currentUser;
     if (currentUser == null) return;
 
-    if (!await UsageQuotaService.consume(currentUser.uid)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Daily usage exhausted. You have no debate uses left today.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
+    // Immediately clear input controller so subsequent taps/keystrokes cannot resend
+    _inputCtrl.clear();
 
-    setState(() {
-      _messages.add(
-        ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
-      );
-      _inputCtrl.clear();
-      _isAiTyping = true;
-    });
-
-    // Call real Gemini AI
-    final aiReply = await AiService.sendDebateMessage(
-      topic: widget.topic,
-      userStance: widget.stance,
-      history: _messages,
-      userMessage: text,
-      difficulty: widget.difficulty,
-      isLearningMode: widget.mode == DebateMode.learning,
+    // Optimistic UI update: show message immediately (0ms delay)
+    final userMsg = ChatMessage(
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
     );
 
-    if (!mounted) return;
     setState(() {
-      _isAiTyping = false;
-      _messages.add(aiReply);
+      _isSending = true;
+      _messages.add(userMsg);
+      _isAiTyping = true;
     });
     _scrollToBottom();
+
+    try {
+      final quotaAvailable = await UsageQuotaService.consume(currentUser.uid);
+      if (!quotaAvailable) {
+        if (!mounted) return;
+        setState(() {
+          _messages.remove(userMsg);
+          _isAiTyping = false;
+          _isSending = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Daily usage exhausted. You have no debate uses left today.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+
+      final priorHistory = _messages.length > 1
+          ? _messages.sublist(0, _messages.length - 1)
+          : const <ChatMessage>[];
+
+      // Call AI Service
+      final aiReply = await AiService.sendDebateMessage(
+        topic: widget.topic,
+        userStance: widget.stance,
+        history: priorHistory,
+        userMessage: text,
+        difficulty: widget.difficulty,
+        isLearningMode: widget.mode == DebateMode.learning,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isAiTyping = false;
+        _messages.add(aiReply);
+      });
+      _scrollToBottom();
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      if (mounted) {
+        setState(() => _isAiTyping = false);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -696,7 +729,12 @@ class _ChatScreenState extends State<ChatScreen>
                         ),
                         Container(
                           padding: const EdgeInsets.all(24),
-                          child: ChatInputBar(controller: _inputCtrl, onSend: _sendMessage),
+                          child: ChatInputBar(
+                            controller: _inputCtrl,
+                            onSend: _sendMessage,
+                            enabled: !_isEnding,
+                            isSending: _isSending || _isAiTyping,
+                          ),
                         ),
                       ],
                     ),
@@ -776,7 +814,12 @@ class _ChatScreenState extends State<ChatScreen>
                       },
                     ),
                   ),
-                  ChatInputBar(controller: _inputCtrl, onSend: _sendMessage)
+                  ChatInputBar(
+                    controller: _inputCtrl,
+                    onSend: _sendMessage,
+                    enabled: !_isEnding,
+                    isSending: _isSending || _isAiTyping,
+                  )
                       .animate(delay: 300.ms)
                       .fadeIn(duration: 400.ms, curve: Curves.easeOutExpo)
                       .slideY(

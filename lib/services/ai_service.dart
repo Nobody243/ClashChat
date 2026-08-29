@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' show min;
 
@@ -22,31 +23,45 @@ class AiService {
     List<Map<String, String>> messages, {
     int maxTokens = 500,
     double temperature = 0.7,
+    bool jsonMode = false,
   }) async {
     for (final model in _models) {
       try {
-        final response = await http.post(
-          Uri.parse(_apiEndpoint),
-          headers: {
-            // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
-            // since it will be visible in the compiled web client. Its only purpose
-            // is to block casual/automated direct calls to the proxy endpoint.
-            'X-App-Secret': _appSecret,
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'model': model,
-            'messages': messages,
-            'max_tokens': maxTokens,
-            'temperature': temperature,
-          }),
-        );
+        final Map<String, dynamic> requestBody = {
+          'model': model,
+          'messages': messages,
+          'max_tokens': maxTokens,
+          'temperature': temperature,
+        };
+
+        if (jsonMode) {
+          requestBody['response_format'] = {'type': 'json_object'};
+        }
+
+        final response = await http
+            .post(
+              Uri.parse(_apiEndpoint),
+              headers: {
+                // APP_SHARED_SECRET is an abuse deterrent, not a cryptographic secret,
+                // since it will be visible in the compiled web client. Its only purpose
+                // is to block casual/automated direct calls to the proxy endpoint.
+                'X-App-Secret': _appSecret,
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(requestBody),
+            )
+            .timeout(
+              const Duration(seconds: 8),
+              onTimeout: () => throw TimeoutException('$model timed out'),
+            );
 
         if (response.statusCode == 200) {
           return response;
         } else {
           debugPrint('GROQ ERROR ($model): ${response.statusCode} - ${response.body}');
         }
+      } on TimeoutException catch (e) {
+        debugPrint('GROQ TIMEOUT ($model): $e');
       } catch (e) {
         debugPrint('GROQ REQUEST ERROR ($model): $e');
       }
@@ -62,56 +77,55 @@ class AiService {
     return cleaned.isNotEmpty ? cleaned : text.trim();
   }
 
-  static Future<ChatMessage> sendDebateMessage({
+  static List<Map<String, String>> _buildDebateMessages({
     required String topic,
     required String userStance,
     required List<ChatMessage> history,
     required String userMessage,
     required String difficulty,
     bool isLearningMode = false,
-  }) async {
-    try {
-      final isStanceFor = userStance.trim().toLowerCase() == 'for';
-      final aiStance = isStanceFor ? 'Against' : 'For';
-      final userStanceLabel = isStanceFor ? 'FOR' : 'AGAINST';
-      final aiStanceLabel = isStanceFor ? 'AGAINST' : 'FOR';
+  }) {
+    final isStanceFor = userStance.trim().toLowerCase() == 'for';
+    final aiStance = isStanceFor ? 'Against' : 'For';
+    final userStanceLabel = isStanceFor ? 'FOR' : 'AGAINST';
+    final aiStanceLabel = isStanceFor ? 'AGAINST' : 'FOR';
 
-      String toneGuide;
-      switch (difficulty.toLowerCase()) {
-        case 'easy':
-        case 'newcomer':
-          toneGuide =
-              'Style: Casual, friendly, and approachable opponent for beginners.\n'
-              '- Approach: Portray your counter-argument with clear, simple points and relatable everyday examples (e.g., daily habits, routine chores, simple life analogies).\n'
-              '- Language: Simple everyday words only, never intimidating or overly complex.\n'
-              '- Length: Maximum 2 short sentences.';
-          break;
-        case 'medium':
-        case 'challenger':
-        case 'debater':
-          toneGuide =
-              'Style: Articulate, evidence-driven, and engaging debate opponent.\n'
-              '- Approach: Formulate strong counter-arguments reinforced with concrete statistics, empirical metrics, real-world data points, and studies.\n'
-              '- Language: Refined, persuasive vocabulary and structured logical reasoning.\n'
-              '- Length: Maximum 2-3 sentences.';
-          break;
-        case 'hard':
-        case 'orator':
-        case 'grandmaster':
-          toneGuide =
-              'Style: Master-level competitive debater (world-class tournament standard).\n'
-              '- Approach: Surgically tackle the user\'s exact response by dissecting their specific premises, unstated assumptions, causal leaps, or logical fallacies with razor-sharp analytical precision.\n'
-              '- Language: Cutting, sophisticated rhetoric and flawless counter-logic that directly dismantles the user\'s claim.\n'
-              '- Length: Maximum 3 sentences.';
-          break;
-        default:
-          toneGuide =
-              'Style: Balanced, articulate debate opponent with strong reasoning. Maximum 2-3 sentences.';
-      }
+    String toneGuide;
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+      case 'newcomer':
+        toneGuide =
+            'Style: Casual, friendly, and approachable opponent for beginners.\n'
+            '- Approach: Portray your counter-argument with clear, simple points and relatable everyday examples (e.g., daily habits, routine chores, simple life analogies).\n'
+            '- Language: Simple everyday words only, never intimidating or overly complex.\n'
+            '- Length: Maximum 2 short sentences.';
+        break;
+      case 'medium':
+      case 'challenger':
+      case 'debater':
+        toneGuide =
+            'Style: Articulate, evidence-driven, and engaging debate opponent.\n'
+            '- Approach: Formulate strong counter-arguments reinforced with concrete statistics, empirical metrics, real-world data points, and studies.\n'
+            '- Language: Refined, persuasive vocabulary and structured logical reasoning.\n'
+            '- Length: Maximum 2-3 sentences.';
+        break;
+      case 'hard':
+      case 'orator':
+      case 'grandmaster':
+        toneGuide =
+            'Style: Master-level competitive debater (world-class tournament standard).\n'
+            '- Approach: Surgically tackle the user\'s exact response by dissecting their specific premises, unstated assumptions, causal leaps, or logical fallacies with razor-sharp analytical precision.\n'
+            '- Language: Cutting, sophisticated rhetoric and flawless counter-logic that directly dismantles the user\'s claim.\n'
+            '- Length: Maximum 3 sentences.';
+        break;
+      default:
+        toneGuide =
+            'Style: Balanced, articulate debate opponent with strong reasoning. Maximum 2-3 sentences.';
+    }
 
-      String systemPrompt;
-      if (isLearningMode) {
-        systemPrompt = '''You are ClashBot, an interactive debate opponent and coach in a live debate duel.
+    final String systemPrompt;
+    if (isLearningMode) {
+      systemPrompt = '''You are ClashBot, an interactive debate opponent and coach in a live debate duel.
 Debate Topic: "$topic"
 User's Position: $userStanceLabel ($userStance)
 Your Position: $aiStanceLabel ($aiStance)
@@ -128,8 +142,8 @@ CORE INSTRUCTIONS:
    - "coach_tip": 1-2 sentence constructive tip analyzing the user's latest debate technique, logical strength, or how they can improve.
    - "argument": Your in-character rebuttal arguing $aiStanceLabel on "$topic" matching the difficulty style above.
 Do NOT output any text, markdown backticks, or preamble outside the JSON object.''';
-      } else {
-        systemPrompt = '''You are ClashBot, an intelligent, sharp, and interactive AI debate opponent in a live 1-on-1 debate duel.
+    } else {
+      systemPrompt = '''You are ClashBot, an intelligent, sharp, and interactive AI debate opponent in a live 1-on-1 debate duel.
 Debate Topic: "$topic"
 User's Position: $userStanceLabel ($userStance)
 Your Position: $aiStanceLabel ($aiStance)
@@ -143,90 +157,254 @@ CORE DEBATE RULES:
 4. NO CANNED OR SCRIPTED STATEMENTS: Never ignore what the user said just to deliver a generic monologue about the topic. Every response must be an organic, real-time rebuttal to the user's specific point.
 5. CONVERSATIONAL PROGRESSION: Build dynamically on the debate history. Never repeat points, examples, or sentences you used in earlier turns.
 6. STAY IN CHARACTER & CONCISE: Speak directly to the user in second person ("you"), passionately defend your stance ($aiStanceLabel), and keep your response punchy and engaging (strictly adhering to the sentence limits). Never include conversational filler like "As an AI" or generic greetings.''';
-      }
+    }
 
-      final List<Map<String, String>> messages = [
-        {'role': 'system', 'content': systemPrompt},
-      ];
+    final List<Map<String, String>> messages = [
+      {'role': 'system', 'content': systemPrompt},
+    ];
 
-      final isOpeningRequest = history.isEmpty ||
-          userMessage == 'Start the debate with a strong opening challenge.';
+    final isOpeningRequest = history.isEmpty ||
+        userMessage == 'Start the debate with a strong opening challenge.';
 
-      if (isOpeningRequest) {
-        messages.add({
-          'role': 'user',
-          'content':
-              'Deliver a bold, provocative opening challenge arguing $aiStanceLabel on the topic of "$topic" against someone who is $userStanceLabel.',
-        });
-      } else {
-        // Build clean conversation history without duplication
-        for (final msg in history) {
-          if (msg.isUser) {
-            messages.add({'role': 'user', 'content': msg.text});
-          } else {
-            messages.add({
-              'role': 'assistant',
-              'content': isLearningMode && msg.coachTip != null
-                  ? jsonEncode({
-                      'coach_tip': msg.coachTip,
-                      'argument': msg.text,
-                    })
-                  : msg.text,
-            });
-          }
-        }
+    if (isOpeningRequest) {
+      messages.add({
+        'role': 'user',
+        'content':
+            'Deliver a bold, provocative opening challenge arguing $aiStanceLabel on the topic of "$topic" against someone who is $userStanceLabel.',
+      });
+    } else {
+      // Trim history to the last 10 entries if longer
+      final trimmedHistory =
+          history.length > 10 ? history.sublist(history.length - 10) : history;
 
-        // If history didn't already include the userMessage at the end, append it
-        if (messages.isEmpty ||
-            messages.last['role'] != 'user' ||
-            messages.last['content'] != userMessage) {
-          messages.add({'role': 'user', 'content': userMessage});
+      for (final msg in trimmedHistory) {
+        if (msg.isUser) {
+          messages.add({'role': 'user', 'content': msg.text});
+        } else {
+          messages.add({
+            'role': 'assistant',
+            'content': isLearningMode && msg.coachTip != null
+                ? jsonEncode({
+                    'coach_tip': msg.coachTip,
+                    'argument': msg.text,
+                  })
+                : msg.text,
+          });
         }
       }
+
+      // Always append userMessage as the final user message
+      messages.add({'role': 'user', 'content': userMessage});
+    }
+
+    return messages;
+  }
+
+  static Future<ChatMessage> sendDebateMessage({
+    required String topic,
+    required String userStance,
+    required List<ChatMessage> history,
+    required String userMessage,
+    required String difficulty,
+    bool isLearningMode = false,
+  }) async {
+    try {
+      final messages = _buildDebateMessages(
+        topic: topic,
+        userStance: userStance,
+        history: history,
+        userMessage: userMessage,
+        difficulty: difficulty,
+        isLearningMode: isLearningMode,
+      );
 
       final response = await _postWithFallback(
         messages,
-        maxTokens: 600,
+        maxTokens: isLearningMode ? 280 : 200,
         temperature: 0.6,
+        jsonMode: isLearningMode,
       );
 
       if (response != null && response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final rawContent = data['choices'][0]['message']['content'] as String?;
-        
-        if (rawContent == null) {
-          return ChatMessage(text: 'Let me think about that...', isUser: false, timestamp: DateTime.now());
+        final rawContent = data['choices']?[0]?['message']?['content'] as String?;
+
+        if (rawContent == null || rawContent.isEmpty) {
+          return ChatMessage(
+            text: 'Let me think about that...',
+            isUser: false,
+            timestamp: DateTime.now(),
+          );
         }
 
         final content = _cleanAiText(rawContent);
 
         if (isLearningMode) {
           try {
-            final jsonStart = content.indexOf('{');
-            final jsonEnd = content.lastIndexOf('}') + 1;
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-              final jsonStr = content.substring(jsonStart, jsonEnd);
-              final parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+            Map<String, dynamic>? parsed;
+            try {
+              parsed = jsonDecode(content) as Map<String, dynamic>;
+            } catch (_) {
+              final jsonStart = content.indexOf('{');
+              final jsonEnd = content.lastIndexOf('}') + 1;
+              if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                final jsonStr = content.substring(jsonStart, jsonEnd);
+                parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+              }
+            }
+
+            if (parsed != null) {
               return ChatMessage(
-                text: parsed['argument'] ?? content,
+                text: parsed['argument']?.toString() ?? content,
                 isUser: false,
                 timestamp: DateTime.now(),
-                coachTip: parsed['coach_tip'],
+                coachTip: parsed['coach_tip']?.toString(),
               );
             }
           } catch (e) {
             debugPrint('JSON Parse error in learning mode: $e');
           }
         }
-        
-        return ChatMessage(text: content, isUser: false, timestamp: DateTime.now());
+
+        return ChatMessage(
+          text: content,
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
       } else {
-        return ChatMessage(text: 'Connection error. Please try again.', isUser: false, timestamp: DateTime.now());
+        return ChatMessage(
+          text: 'Connection error. Please try again.',
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
       }
     } catch (e) {
       debugPrint('AI Service Error: $e');
-      return ChatMessage(text: 'Connection error. Please try again.', isUser: false, timestamp: DateTime.now());
+      return ChatMessage(
+        text: 'Connection error. Please try again.',
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
     }
+  }
+
+  /// Streams debate opponent replies token by token via Server-Sent Events (SSE).
+  ///
+  /// NOTE: The Cloudflare Worker proxy (clashchat-proxy) must also be updated to
+  /// forward `stream: true` and pipe through the SSE response headers and body
+  /// for this to work end-to-end.
+  static Stream<String> sendDebateMessageStream({
+    required String topic,
+    required String userStance,
+    required List<ChatMessage> history,
+    required String userMessage,
+    required String difficulty,
+    bool isLearningMode = false,
+  }) async* {
+    // Learning mode requires full JSON parsing for coach_tip and argument, so
+    // fall back to non-streaming sendDebateMessage.
+    if (isLearningMode) {
+      final msg = await sendDebateMessage(
+        topic: topic,
+        userStance: userStance,
+        history: history,
+        userMessage: userMessage,
+        difficulty: difficulty,
+        isLearningMode: isLearningMode,
+      );
+      yield msg.text;
+      return;
+    }
+
+    final messages = _buildDebateMessages(
+      topic: topic,
+      userStance: userStance,
+      history: history,
+      userMessage: userMessage,
+      difficulty: difficulty,
+      isLearningMode: false,
+    );
+
+    for (final model in _models) {
+      final client = http.Client();
+      var hasYieldedAny = false;
+      var accumulatedText = '';
+
+      try {
+        final request = http.Request('POST', Uri.parse(_apiEndpoint))
+          ..headers.addAll({
+            'X-App-Secret': _appSecret,
+            'Content-Type': 'application/json',
+          })
+          ..body = jsonEncode({
+            'model': model,
+            'messages': messages,
+            'max_tokens': 200,
+            'temperature': 0.6,
+            'stream': true,
+          });
+
+        final streamedResponse = await client
+            .send(request)
+            .timeout(
+              const Duration(seconds: 8),
+              onTimeout: () => throw TimeoutException('$model stream timed out'),
+            );
+
+        if (streamedResponse.statusCode == 200) {
+          final lineStream = streamedResponse.stream
+              .transform(utf8.decoder)
+              .transform(const LineSplitter());
+
+          await for (final line in lineStream) {
+            final trimmed = line.trim();
+            if (trimmed.isEmpty) continue;
+            if (trimmed.startsWith('data: ')) {
+              final data = trimmed.substring(6).trim();
+              if (data == '[DONE]') break;
+              try {
+                final json = jsonDecode(data) as Map<String, dynamic>;
+                final delta = json['choices']?[0]?['delta']?['content'] as String?;
+                if (delta != null && delta.isNotEmpty) {
+                  hasYieldedAny = true;
+                  accumulatedText += delta;
+                  yield accumulatedText;
+                }
+              } catch (_) {
+                // Ignore malformed intermediate chunk
+              }
+            }
+          }
+
+          if (hasYieldedAny) {
+            client.close();
+            return;
+          }
+        } else {
+          debugPrint('GROQ STREAM ERROR ($model): ${streamedResponse.statusCode}');
+        }
+      } on TimeoutException catch (e) {
+        debugPrint('GROQ STREAM TIMEOUT ($model): $e');
+      } catch (e) {
+        debugPrint('GROQ STREAM REQUEST ERROR ($model): $e');
+      } finally {
+        client.close();
+      }
+
+      if (hasYieldedAny) {
+        return;
+      }
+    }
+
+    final fallbackMsg = await sendDebateMessage(
+      topic: topic,
+      userStance: userStance,
+      history: history,
+      userMessage: userMessage,
+      difficulty: difficulty,
+      isLearningMode: false,
+    );
+    yield fallbackMsg.text;
   }
 
   static Future<Map<String, dynamic>> scoreDebate({
@@ -331,30 +509,32 @@ Judge fairly for this difficulty level. Score now with ONLY the JSON object.
         ],
         maxTokens: 500,
         temperature: 0.4,
+        jsonMode: true,
       );
 
       if (response != null && response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final rawText = data['choices'][0]['message']['content'] as String?;
+        final rawText = data['choices']?[0]?['message']?['content'] as String?;
         debugPrint('✅ API RESPONSE TEXT: "$rawText"');
 
         if (rawText != null && rawText.isNotEmpty) {
           final text = _cleanAiText(rawText);
           try {
-            final jsonStart = text.indexOf('{');
-            final jsonEnd = text.lastIndexOf('}') + 1;
-            debugPrint(
-              '🔍 JSON Start: $jsonStart, JSON End: $jsonEnd, Text length: ${text.length}',
-            );
+            Map<String, dynamic>? parsed;
+            try {
+              parsed = jsonDecode(text) as Map<String, dynamic>;
+            } catch (_) {
+              final jsonStart = text.indexOf('{');
+              final jsonEnd = text.lastIndexOf('}') + 1;
+              if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                final jsonStr = text.substring(jsonStart, jsonEnd);
+                parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+              }
+            }
 
-            if (jsonStart >= 0 && jsonEnd > jsonStart) {
-              final jsonStr = text.substring(jsonStart, jsonEnd);
-              debugPrint('📄 Extracted JSON string: "$jsonStr"');
-
-              final parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+            if (parsed != null) {
               debugPrint('✅ PARSED JSON: $parsed');
 
-              // Validate score is a number and in reasonable range
               final rawScore = parsed['score'];
               debugPrint(
                 '📊 RAW SCORE VALUE: "$rawScore" (Type: ${rawScore.runtimeType})',
@@ -386,9 +566,7 @@ Judge fairly for this difficulty level. Score now with ONLY the JSON object.
                 debugPrint('❌ SCORE OUT OF VALID RANGE: $score (must be 10-100)');
               }
             } else {
-              debugPrint(
-                '❌ Could not find JSON in response: jsonStart=$jsonStart, jsonEnd=$jsonEnd',
-              );
+              debugPrint('❌ Could not parse JSON from response text: $text');
             }
           } catch (parseError) {
             debugPrint('❌ JSON PARSE ERROR: $parseError');
