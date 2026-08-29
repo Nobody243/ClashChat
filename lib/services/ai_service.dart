@@ -71,61 +71,119 @@ class AiService {
     bool isLearningMode = false,
   }) async {
     try {
-      final aiStance = userStance == 'For' ? 'Against' : 'For';
+      final isStanceFor = userStance.trim().toLowerCase() == 'for';
+      final aiStance = isStanceFor ? 'Against' : 'For';
+      final userStanceLabel = isStanceFor ? 'FOR' : 'AGAINST';
+      final aiStanceLabel = isStanceFor ? 'AGAINST' : 'FOR';
 
-      String systemPrompt;
+      String toneGuide;
       switch (difficulty.toLowerCase()) {
         case 'easy':
         case 'newcomer':
-          systemPrompt = 'You are a casual debate opponent talking to a beginner. Use simple everyday words only. Make small logical mistakes sometimes. Be friendly, never intimidating. Max 2 short sentences.';
+          toneGuide =
+              'Style: Casual, friendly, and approachable opponent for beginners.\n'
+              '- Approach: Portray your counter-argument with clear, simple points and relatable everyday examples (e.g., daily habits, routine chores, simple life analogies).\n'
+              '- Language: Simple everyday words only, never intimidating or overly complex.\n'
+              '- Length: Maximum 2 short sentences.';
           break;
         case 'medium':
         case 'challenger':
         case 'debater':
-          systemPrompt = 'You are a balanced debate opponent. Use clear simple arguments, no fancy words. Be fair and logical but do not overwhelm. Give the user a real challenge but keep it understandable. Max 3 sentences.';
+          toneGuide =
+              'Style: Articulate, evidence-driven, and engaging debate opponent.\n'
+              '- Approach: Formulate strong counter-arguments reinforced with concrete statistics, empirical metrics, real-world data points, and studies.\n'
+              '- Language: Refined, persuasive vocabulary and structured logical reasoning.\n'
+              '- Length: Maximum 2-3 sentences.';
           break;
         case 'hard':
         case 'orator':
-          systemPrompt = 'You are a sharp expert debater. Use advanced logic, philosophy, and precise vocabulary. Never give ground easily. Be aggressive and surgical. Max 3 sentences.';
-          break;
         case 'grandmaster':
-          systemPrompt = 'You are an absolute master of debate. Your logic is flawless and ruthless. Exploit every tiny flaw in the user\'s argument. Use highly advanced vocabulary and rhetorical devices. Max 3 sentences.';
+          toneGuide =
+              'Style: Master-level competitive debater (world-class tournament standard).\n'
+              '- Approach: Surgically tackle the user\'s exact response by dissecting their specific premises, unstated assumptions, causal leaps, or logical fallacies with razor-sharp analytical precision.\n'
+              '- Language: Cutting, sophisticated rhetoric and flawless counter-logic that directly dismantles the user\'s claim.\n'
+              '- Length: Maximum 3 sentences.';
           break;
         default:
-          systemPrompt = 'You are a balanced debate opponent. Be fair and logical. Max 3 sentences.';
+          toneGuide =
+              'Style: Balanced, articulate debate opponent with strong reasoning. Maximum 2-3 sentences.';
       }
 
+      String systemPrompt;
       if (isLearningMode) {
-        systemPrompt = 'You are an expert debate coach and teacher. The user is practicing debating against you. You must play the role of their opponent AND their coach.\n'
-            'Your difficulty level is: $difficulty.\n'
-            'Every time you reply, you MUST return your response in strictly valid JSON format with two keys:\n'
-            '1. "coach_tip": Provide brief, constructive feedback on the user\'s last argument (e.g., pointing out logical fallacies, strong points, or missing evidence).\n'
-            '2. "argument": Make your actual counter-argument as the opponent.\n'
-            'Do not return any text outside of the JSON object.';
+        systemPrompt = '''You are ClashBot, an interactive debate opponent and coach in a live debate duel.
+Debate Topic: "$topic"
+User's Position: $userStanceLabel ($userStance)
+Your Position: $aiStanceLabel ($aiStance)
+Difficulty Level: $difficulty
+$toneGuide
+
+CORE INSTRUCTIONS:
+1. DIRECT REBUTTAL: You MUST directly tackle and respond to the user's EXACT latest words and claims. Dissect their specific statements and defend your position with precision!
+2. NO SCRIPTED MONOLOGUES: Never ignore what the user said just to deliver a generic speech about the topic. Every reply must be an organic, real-time rebuttal.
+3. CONVERSATIONAL CONTINUITY: Build dynamically on the debate back-and-forth. Never repeat previous arguments or phrasing.
+4. STRICT JSON FORMAT: You MUST return strictly valid JSON with exactly two keys:
+   - "coach_tip": 1-2 sentence constructive tip analyzing the user's latest debate technique, logical strength, or how they can improve.
+   - "argument": Your in-character rebuttal arguing $aiStanceLabel on "$topic" matching the difficulty style above.
+Do NOT output any text, markdown backticks, or preamble outside the JSON object.''';
+      } else {
+        systemPrompt = '''You are ClashBot, an intelligent, sharp, and interactive AI debate opponent in a live 1-on-1 debate duel.
+Debate Topic: "$topic"
+User's Position: $userStanceLabel ($userStance)
+Your Position: $aiStanceLabel ($aiStance)
+Difficulty Level: $difficulty
+$toneGuide
+
+CORE DEBATE RULES:
+1. ALWAYS DIRECTLY ADDRESS THE USER: You MUST directly respond to, rebut, and confront the user's EXACT words, claims, challenges, or questions in their latest message. Rebut their exact premise directly!
+2. NO CANNED OR SCRIPTED STATEMENTS: Never ignore what the user said just to deliver a generic monologue about the topic. Every response must be an organic, real-time rebuttal to the user's specific point.
+3. CONVERSATIONAL PROGRESSION: Build dynamically on the debate history. Never repeat points, examples, or sentences you used in earlier turns.
+4. STAY IN CHARACTER & CONCISE: Speak directly to the user in second person ("you"), passionately defend your stance ($aiStanceLabel), and keep your response punchy and engaging (strictly adhering to the sentence limits). Never include conversational filler like "As an AI" or generic greetings.''';
       }
 
-      final messages = [
+      final List<Map<String, String>> messages = [
         {'role': 'system', 'content': systemPrompt},
-        ...history
-            .map(
-              (msg) => {
-                'role': msg.isUser ? 'user' : 'assistant',
-                'content': isLearningMode && !msg.isUser && msg.coachTip != null
-                    ? '{"coach_tip": "${msg.coachTip}", "argument": "${msg.text}"}'
-                    : msg.text,
-              },
-            ),
-        {
+      ];
+
+      final isOpeningRequest = history.isEmpty ||
+          userMessage == 'Start the debate with a strong opening challenge.';
+
+      if (isOpeningRequest) {
+        messages.add({
           'role': 'user',
           'content':
-              'Debate topic: "$topic"\nUser is arguing: $userStance\nYou must argue: $aiStance\nBe a fierce but fair opponent. Max 3 sentences.\n\nUser says: $userMessage',
-        },
-      ];
+              'Deliver a bold, provocative opening challenge arguing $aiStanceLabel on the topic of "$topic" against someone who is $userStanceLabel.',
+        });
+      } else {
+        // Build clean conversation history without duplication
+        for (final msg in history) {
+          if (msg.isUser) {
+            messages.add({'role': 'user', 'content': msg.text});
+          } else {
+            messages.add({
+              'role': 'assistant',
+              'content': isLearningMode && msg.coachTip != null
+                  ? jsonEncode({
+                      'coach_tip': msg.coachTip,
+                      'argument': msg.text,
+                    })
+                  : msg.text,
+            });
+          }
+        }
+
+        // If history didn't already include the userMessage at the end, append it
+        if (messages.isEmpty ||
+            messages.last['role'] != 'user' ||
+            messages.last['content'] != userMessage) {
+          messages.add({'role': 'user', 'content': userMessage});
+        }
+      }
 
       final response = await _postWithFallback(
         messages,
-        maxTokens: 500,
-        temperature: 0.7,
+        maxTokens: 600,
+        temperature: 0.6,
       );
 
       if (response != null && response.statusCode == 200) {
