@@ -37,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen>
   int _tab = 0;
   bool _obscureLogin = true;
   bool _obscureSignup = true;
+  bool _isLoading = false;
 
   final _loginEmail = TextEditingController();
   final _loginPass = TextEditingController();
@@ -118,28 +119,56 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleLogin() async {
-    final error = await AuthService.login(_loginEmail.text, _loginPass.text);
-    if (!mounted) return;
-    if (error == null) {
-      // Create session on successful login
-      await SessionService.createSession();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } else {
+    if (_isLoading) return;
+
+    final email = _loginEmail.text.trim();
+    final pass = _loginPass.text;
+    if (email.isEmpty || pass.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please enter your email and password'),
+          backgroundColor: Colors.orange,
+        ),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final error = await AuthService.login(email, pass);
+      if (!mounted) return;
+      if (error == null) {
+        // Create session on successful login
+        await SessionService.createSession();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   Future<void> _handleSignup() async {
+    if (_isLoading) return;
+
     // Validate inputs
-    if (_signupEmail.text.isEmpty ||
-        _signupPass.text.isEmpty ||
-        _signupName.text.isEmpty) {
+    if (_signupEmail.text.trim().isEmpty ||
+        _signupPass.text.trim().isEmpty ||
+        _signupName.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill in all fields'),
@@ -153,43 +182,93 @@ class _LoginScreenState extends State<LoginScreen>
     final password = _signupPass.text.trim();
     final name = _signupName.text.trim();
 
-    debugPrint('Starting signup for $email');
-    final error = await AuthService.signUp(email, password, displayName: name);
+    setState(() => _isLoading = true);
 
-    if (!mounted) {
-      debugPrint('Widget unmounted, not navigating');
-      return;
-    }
+    try {
+      debugPrint('Starting signup for $email');
+      final error = await AuthService.signUp(email, password, displayName: name);
 
-    debugPrint('Signup result: ${error ?? "Success"}');
+      if (!mounted) return;
 
-    if (error == null) {
-      debugPrint('Signup successful, navigating to HomeScreen');
-      // Clear the form
-      _signupEmail.clear();
-      _signupPass.clear();
-      _signupName.clear();
+      debugPrint('Signup result: ${error ?? "Success"}');
 
-      // Create session on successful signup
-      await SessionService.createSession();
+      if (error == null) {
+        debugPrint('Signup successful, navigating to HomeScreen');
+        // Clear the form
+        _signupEmail.clear();
+        _signupPass.clear();
+        _signupName.clear();
 
-      // Navigate using pushAndRemoveUntil to ensure clean navigation
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
+        // Create session on successful signup
+        await SessionService.createSession();
+
+        // Navigate using pushAndRemoveUntil to ensure clean navigation
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        }
+      } else {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => _ThemedDialog(
+              title: 'Signup Failed',
+              content: error,
+              actions: [('OK', null)],
+            ),
+          );
+        }
       }
-    } else {
-      // Error - show dialog
+    } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => _ThemedDialog(
             title: 'Signup Failed',
-            content: error,
+            content: e.toString(),
             actions: [('OK', null)],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await AuthService.signInWithGoogle();
+      if (!mounted) return;
+
+      if (result != null) {
+        await SessionService.createSession();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google sign in failed. Try again.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign in error: $e'),
           ),
         );
       }
@@ -291,8 +370,9 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           child: _AuthCard(
                             tab: _tab,
+                            isLoading: _isLoading,
                             onSwitchTab: (i) {
-                              if (i != _tab) setState(() => _tab = i);
+                              if (i != _tab && !_isLoading) setState(() => _tab = i);
                             },
                             loginEmail: _loginEmail,
                             loginPass: _loginPass,
@@ -307,6 +387,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 setState(() => _obscureSignup = !_obscureSignup),
                             onLoginTap: _handleLogin,
                             onSignupTap: _handleSignup,
+                            onGoogleSignInTap: _handleGoogleSignIn,
                             glowAnim: _glow,
                           ),
                         ),
@@ -560,6 +641,7 @@ class _RingPainter extends CustomPainter {
 //
 class _AuthCard extends StatelessWidget {
   final int tab;
+  final bool isLoading;
   final ValueChanged<int> onSwitchTab;
   final TextEditingController loginEmail, loginPass;
   final bool obscureLogin;
@@ -569,10 +651,12 @@ class _AuthCard extends StatelessWidget {
   final VoidCallback onToggleSignup;
   final VoidCallback onLoginTap;
   final VoidCallback onSignupTap;
+  final VoidCallback onGoogleSignInTap;
   final AnimationController glowAnim;
 
   const _AuthCard({
     required this.tab,
+    required this.isLoading,
     required this.onSwitchTab,
     required this.loginEmail,
     required this.loginPass,
@@ -585,6 +669,7 @@ class _AuthCard extends StatelessWidget {
     required this.onToggleSignup,
     required this.onLoginTap,
     required this.onSignupTap,
+    required this.onGoogleSignInTap,
     required this.glowAnim,
   });
 
@@ -670,7 +755,11 @@ class _AuthCard extends StatelessWidget {
               //  Toggle row
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _ToggleRow(active: tab, onSwitch: onSwitchTab),
+                child: _ToggleRow(
+                  active: tab,
+                  disabled: isLoading,
+                  onSwitch: onSwitchTab,
+                ),
               ),
 
               const SizedBox(height: 18),
@@ -700,8 +789,10 @@ class _AuthCard extends StatelessWidget {
                             emailCtrl: loginEmail,
                             passCtrl: loginPass,
                             obscure: obscureLogin,
+                            isLoading: isLoading,
                             onToggle: onToggleLogin,
                             onSubmit: onLoginTap,
+                            onGoogleSignInTap: onGoogleSignInTap,
                           ),
                         )
                       : KeyedSubtree(
@@ -711,8 +802,10 @@ class _AuthCard extends StatelessWidget {
                             emailCtrl: signupEmail,
                             passCtrl: signupPass,
                             obscure: obscureSignup,
+                            isLoading: isLoading,
                             onToggle: onToggleSignup,
                             onSubmit: onSignupTap,
+                            onGoogleSignInTap: onGoogleSignInTap,
                           ),
                         ),
                 ),
@@ -827,8 +920,13 @@ class _ArcPainter extends CustomPainter {
 //
 class _ToggleRow extends StatelessWidget {
   final int active;
+  final bool disabled;
   final ValueChanged<int> onSwitch;
-  const _ToggleRow({required this.active, required this.onSwitch});
+  const _ToggleRow({
+    required this.active,
+    this.disabled = false,
+    required this.onSwitch,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -845,12 +943,12 @@ class _ToggleRow extends StatelessWidget {
           _ToggleBtn(
             label: 'Sign In',
             active: active == 0,
-            onTap: () => onSwitch(0),
+            onTap: disabled ? () {} : () => onSwitch(0),
           ),
           _ToggleBtn(
             label: 'Create Account',
             active: active == 1,
-            onTap: () => onSwitch(1),
+            onTap: disabled ? () {} : () => onSwitch(1),
           ),
         ],
       ),
@@ -918,14 +1016,17 @@ class _ToggleBtn extends StatelessWidget {
 class _LoginForm extends StatelessWidget {
   final TextEditingController emailCtrl, passCtrl;
   final bool obscure;
-  final VoidCallback onToggle, onSubmit;
+  final bool isLoading;
+  final VoidCallback onToggle, onSubmit, onGoogleSignInTap;
 
   const _LoginForm({
     required this.emailCtrl,
     required this.passCtrl,
     required this.obscure,
+    required this.isLoading,
     required this.onToggle,
     required this.onSubmit,
+    required this.onGoogleSignInTap,
   });
 
   @override
@@ -941,6 +1042,7 @@ class _LoginForm extends StatelessWidget {
             hint: 'you@example.com',
             icon: Icons.alternate_email_rounded,
             keyboardType: TextInputType.emailAddress,
+            enabled: !isLoading,
           ),
           const SizedBox(height: 16),
           _DarkField(
@@ -950,11 +1052,12 @@ class _LoginForm extends StatelessWidget {
             icon: Icons.lock_outline_rounded,
             obscure: obscure,
             onToggle: onToggle,
+            enabled: !isLoading,
           ),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {},
+              onPressed: isLoading ? null : () {},
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 minimumSize: Size.zero,
@@ -971,57 +1074,47 @@ class _LoginForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          _CTA(label: 'Sign In', onTap: onSubmit),
+          _CTA(
+            label: 'Sign In',
+            isLoading: isLoading,
+            onTap: onSubmit,
+          ),
           const SizedBox(height: 16),
           GestureDetector(
-            onTap: () async {
-              final result = await AuthService.signInWithGoogle();
-              if (result != null) {
-                // Create session on successful Google sign-in
-                await SessionService.createSession();
-                if (!context.mounted) return;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                );
-              } else {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Google sign in failed. Try again.'),
-                  ),
-                );
-              }
-            },
-            child: Container(
-              width: double.infinity,
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A24),
-                border: Border.all(color: const Color(0xFF2A2A35), width: 1.0),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/google_icon.png', height: 20),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Continue with Google',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+            onTap: isLoading ? null : onGoogleSignInTap,
+            child: AnimatedOpacity(
+              opacity: isLoading ? 0.6 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A24),
+                  border: Border.all(color: const Color(0xFF2A2A35), width: 1.0),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/google_icon.png', height: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Continue with Google',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1037,15 +1130,18 @@ class _LoginForm extends StatelessWidget {
 class _SignupForm extends StatelessWidget {
   final TextEditingController nameCtrl, emailCtrl, passCtrl;
   final bool obscure;
-  final VoidCallback onToggle, onSubmit;
+  final bool isLoading;
+  final VoidCallback onToggle, onSubmit, onGoogleSignInTap;
 
   const _SignupForm({
     required this.nameCtrl,
     required this.emailCtrl,
     required this.passCtrl,
     required this.obscure,
+    required this.isLoading,
     required this.onToggle,
     required this.onSubmit,
+    required this.onGoogleSignInTap,
   });
 
   @override
@@ -1060,6 +1156,7 @@ class _SignupForm extends StatelessWidget {
             label: 'FULL NAME',
             hint: 'Your name',
             icon: Icons.person_outline_rounded,
+            enabled: !isLoading,
           ),
           const SizedBox(height: 16),
           _DarkField(
@@ -1068,6 +1165,7 @@ class _SignupForm extends StatelessWidget {
             hint: 'you@example.com',
             icon: Icons.alternate_email_rounded,
             keyboardType: TextInputType.emailAddress,
+            enabled: !isLoading,
           ),
           const SizedBox(height: 16),
           _DarkField(
@@ -1077,52 +1175,43 @@ class _SignupForm extends StatelessWidget {
             icon: Icons.lock_outline_rounded,
             obscure: obscure,
             onToggle: onToggle,
+            enabled: !isLoading,
           ),
           const SizedBox(height: 24),
-          _CTA(label: 'Join Debate', onTap: onSubmit),
+          _CTA(
+            label: 'Join Debate',
+            isLoading: isLoading,
+            onTap: onSubmit,
+          ),
           const SizedBox(height: 16),
           GestureDetector(
-            onTap: () async {
-              final result = await AuthService.signInWithGoogle();
-              if (result != null) {
-                // Create session on successful Google sign-in
-                await SessionService.createSession();
-                if (!context.mounted) return;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                );
-              } else {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Google sign in failed. Try again.'),
-                  ),
-                );
-              }
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: _kBg.withValues(alpha: 0.5),
-                border: Border.all(color: _kBorder, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/google_icon.png', height: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Continue with Google',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+            onTap: isLoading ? null : onGoogleSignInTap,
+            child: AnimatedOpacity(
+              opacity: isLoading ? 0.6 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: _kBg.withValues(alpha: 0.5),
+                  border: Border.all(color: _kBorder, width: 1.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/google_icon.png', height: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Continue with Google',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1140,6 +1229,7 @@ class _DarkField extends StatelessWidget {
   final String label, hint;
   final IconData icon;
   final bool obscure;
+  final bool enabled;
   final VoidCallback? onToggle;
   final TextInputType? keyboardType;
 
@@ -1149,6 +1239,7 @@ class _DarkField extends StatelessWidget {
     required this.hint,
     required this.icon,
     this.obscure = false,
+    this.enabled = true,
     this.onToggle,
     this.keyboardType,
   });
@@ -1171,7 +1262,7 @@ class _DarkField extends StatelessWidget {
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: Colors.white.withValues(alpha: enabled ? 0.04 : 0.02),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _kBorder.withValues(alpha: 0.1)),
           ),
@@ -1179,11 +1270,12 @@ class _DarkField extends StatelessWidget {
             child: TextFormField(
               controller: ctrl,
               obscureText: obscure,
+              enabled: enabled,
               keyboardType: keyboardType,
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: enabled ? Colors.white : _kHint,
               ),
               textAlignVertical: TextAlignVertical.center,
               decoration: InputDecoration(
@@ -1220,39 +1312,55 @@ class _DarkField extends StatelessWidget {
 //
 class _CTA extends StatelessWidget {
   final String label;
+  final bool isLoading;
   final VoidCallback onTap;
-  const _CTA({required this.label, required this.onTap});
+  const _CTA({
+    required this.label,
+    this.isLoading = false,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child:
-          Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7F77DD),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF7F77DD).withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
+      onTap: isLoading ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 52,
+        decoration: BoxDecoration(
+          color: isLoading
+              ? const Color(0xFF7F77DD).withValues(alpha: 0.6)
+              : const Color(0xFF7F77DD),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7F77DD).withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ),
+        ),
+      ),
     );
   }
 }

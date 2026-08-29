@@ -6,8 +6,6 @@ import 'usage_quota_service.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
-  static const String _googleWebClientId =
-      '308163713864-930lujbb5030d0ou9fgh2cr28acm2o3p.apps.googleusercontent.com';
 
   static String _safeAvatarSeed(String? seed, {String fallback = 'Debater'}) {
     final value = seed?.trim();
@@ -37,28 +35,16 @@ class AuthService {
           ? displayName
           : email.split('@').first;
 
-      // Update Firebase Auth displayName
-      try {
-        await user.updateDisplayName(finalDisplayName);
-        debugPrint('DisplayName updated: $finalDisplayName');
-      } catch (e) {
-        debugPrint('Error updating displayName: $e');
-      }
+      final userDoc = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
 
-      // Refresh the current user to ensure displayName is updated
-      try {
-        await _auth.currentUser?.reload();
-        debugPrint('User reloaded after displayName update');
-      } catch (e) {
-        debugPrint('Error reloading user: $e');
-      }
-
-      // Create Firestore user document with retry logic
-      try {
-        final userDoc = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid);
-        await userDoc.set({
+      // Run Firebase Auth display name update and Firestore doc initialization concurrently
+      await Future.wait([
+        user.updateDisplayName(finalDisplayName).catchError((e) {
+          debugPrint('Error updating displayName: $e');
+        }),
+        userDoc.set({
           'displayName': finalDisplayName,
           'email': user.email,
           'bio': '',
@@ -68,12 +54,10 @@ class AuthService {
           'dailyUsageUsed': 0,
           'dailyUsageDayKey': UsageQuotaService.todayKey(),
           'createdAt': FieldValue.serverTimestamp(),
-        });
-        debugPrint('Firestore document created for user ${user.uid}');
-      } catch (firestoreError) {
-        debugPrint('Firestore error (non-blocking): $firestoreError');
-        // Continue anyway - auth user is created, Firestore can be populated later
-      }
+        }).catchError((firestoreError) {
+          debugPrint('Firestore error (non-blocking): $firestoreError');
+        }),
+      ]);
 
       debugPrint('SignUp successful for $email - uid: ${user.uid}');
       return null; // null = success
@@ -177,9 +161,6 @@ class AuthService {
       final displayName = _safeAvatarSeed(user.displayName);
       final email = user.email ?? '';
 
-      await user.updateDisplayName(displayName);
-      await user.reload();
-
       final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final profileData = <String, dynamic>{
         'displayName': displayName,
@@ -199,8 +180,13 @@ class AuthService {
         profileData['createdAt'] = FieldValue.serverTimestamp();
       }
 
-      await userDoc.set(profileData, SetOptions(merge: true));
-      await UsageQuotaService.ensureInitialized(user.uid);
+      await Future.wait([
+        user.updateDisplayName(displayName).catchError((e) {
+          debugPrint('Error updating displayName on Google sign in: $e');
+        }),
+        userDoc.set(profileData, SetOptions(merge: true)),
+      ]);
+
       return userCredential;
     } catch (e) {
       debugPrint('Google Sign In Error: $e');

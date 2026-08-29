@@ -470,7 +470,6 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIsDark = isDark || context.watch<ThemeProvider>().isDark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
