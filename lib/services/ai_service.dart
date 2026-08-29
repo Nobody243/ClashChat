@@ -220,7 +220,7 @@ CORE DEBATE RULES:
 
       final response = await _postWithFallback(
         messages,
-        maxTokens: isLearningMode ? 280 : 200,
+        maxTokens: isLearningMode ? 650 : 600,
         temperature: 0.6,
         jsonMode: isLearningMode,
       );
@@ -339,7 +339,7 @@ CORE DEBATE RULES:
           ..body = jsonEncode({
             'model': model,
             'messages': messages,
-            'max_tokens': 200,
+            'max_tokens': 600,
             'temperature': 0.6,
             'stream': true,
           });
