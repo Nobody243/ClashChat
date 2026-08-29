@@ -45,7 +45,6 @@ app.*.map.json
 /android/app/release
 
 # Firebase configuration files
-google-services.json
 GoogleService-Info.plist
 
 # Optional local-only setup files
@@ -55,9 +54,7 @@ GITHUB_READY_CHECKLIST.md
 .vscode/tasks.json
 
 # Environment files
-/env
 .env
-lib/firebase_options.dart
 local.properties
 .gradle/
 # Ignore any other env variants
@@ -73,6 +70,5 @@ local.properties
 # Android signing and generated files
 android/key.properties
 android/app/my-release-key.jks
-android/app/google-services.json
 android/signing_report.txt
 *.jks
