@@ -35,118 +35,19 @@ jobs:
       - name: Restore Build Configurations & Credentials
         env:
           APP_SHARED_SECRET: ${{ secrets.APP_SHARED_SECRET || 'b3bb560a824e4d36bb51e1bae2a75cd51a4dd9b4d4884d4c8e64bbf4fa26676b' }}
+          FB_B64: ${{ secrets.FIREBASE_OPTIONS_B64 || 'aW1wb3J0ICdwYWNrYWdlOmZpcmViYXNlX2NvcmUvZmlyZWJhc2VfY29yZS5kYXJ0JzsNCmltcG9ydCAncGFja2FnZTpmbHV0dGVyL2ZvdW5kYXRpb24uZGFydCcNCiAgICBzaG93IGRlZmF1bHRUYXJnZXRQbGF0Zm9ybSwga0lzV2ViLCBUYXJnZXRQbGF0Zm9ybTsNCg0KY2xhc3MgRGVmYXVsdEZpcmViYXNlT3B0aW9ucyB7DQogIHN0YXRpYyBGaXJlYmFzZU9wdGlvbnMgZ2V0IGN1cnJlbnRQbGF0Zm9ybSB7DQogICAgaWYgKGtJc1dlYikgew0KICAgICAgcmV0dXJuIHdlYjsNCiAgICB9DQogICAgc3dpdGNoIChkZWZhdWx0VGFyZ2V0UGxhdGZvcm0pIHsNCiAgICAgIGNhc2UgVGFyZ2V0UGxhdGZvcm0uYW5kcm9pZDoNCiAgICAgICAgcmV0dXJuIGFuZHJvaWQ7DQogICAgICBjYXNlIFRhcmdldFBsYXRmb3JtLmlPUzoNCiAgICAgIGNhc2UgVGFyZ2V0UGxhdGZvcm0ubWFjT1M6DQogICAgICBjYXNlIFRhcmdldFBsYXRmb3JtLndpbmRvd3M6DQogICAgICBjYXNlIFRhcmdldFBsYXRmb3JtLmxpbnV4Og0KICAgICAgY2FzZSBUYXJnZXRQbGF0Zm9ybS5mdWNoc2lhOg0KICAgICAgICB0aHJvdyBVbnN1cHBvcnRlZEVycm9yKA0KICAgICAgICAgICdEZWZhdWx0RmlyZWJhc2VPcHRpb25zIGhhdmUgbm90IGJlZW4gY29uZmlndXJlZCBmb3IgdGhpcyBwbGF0Zm9ybSAtICcNCiAgICAgICAgICAncnVuIGZsdXR0ZXJmaXJlIGNvbmZpZ3VyZSB0byBnZW5lcmF0ZSBwbGF0Zm9ybS1zcGVjaWZpYyBvcHRpb25zLicsDQogICAgICAgICk7DQogICAgfQ0KICB9DQoNCiAgc3RhdGljIGNvbnN0IEZpcmViYXNlT3B0aW9ucyBhbmRyb2lkID0gRmlyZWJhc2VPcHRpb25zKA0KICAgIGFwaUtleTogJ0FJemFTeUJRTUFza1ROWTNjODUwdE5hakprLVJwOGI1VnNkNUc4dycsDQogICAgYXBwSWQ6ICcxOjMwODE2MzcxMzg2NDphbmRyb2lkOjViZDhiYTlkOGNkMzUwYWQ4MTMxN2QnLA0KICAgIG1lc3NhZ2luZ1NlbmRlcklkOiAnMzA4MTYzNzEzODY0JywNCiAgICBwcm9qZWN0SWQ6ICdjbGFzaGNoYXQtNTRkYzAnLA0KICAgIHN0b3JhZ2VCdWNrZXQ6ICdjbGFzaGNoYXQtNTRkYzAuZmlyZWJhc2VzdG9yYWdlLmFwcCcsDQogICk7DQoNCiAgc3RhdGljIGNvbnN0IEZpcmViYXNlT3B0aW9ucyB3ZWIgPSBGaXJlYmFzZU9wdGlvbnMoDQogICAgYXBpS2V5OiAnQUl6YVN5Q3FiNm94ZU9Ncjdna1YtRThiclVrekZ1ZWJ0cTB1bUQwJywNCiAgICBhcHBJZDogJzE6MzA4MTYzNzEzODY0OndlYjpiYTVkYzg0NzQxMGE4NzUyODEzMTdkJywNCiAgICBtZXNzYWdpbmdTZW5kZXJJZDogJzMwODE2MzcxMzg2NCcsDQogICAgcHJvamVjdElkOiAnY2xhc2hjaGF0LTU0ZGMwJywNCiAgICBzdG9yYWdlQnVja2V0OiAnY2xhc2hjaGF0LTU0ZGMwLmZpcmViYXNlc3RvcmFnZS5hcHAnLA0KICAgIGF1dGhEb21haW46ICdjbGFzaGNoYXQtNTRkYzAuZmlyZWJhc2VhcHAuY29tJywNCiAgICBkYXRhYmFzZVVSTDogJ2h0dHBzOi8vY2xhc2hjaGF0LTU0ZGMwLWRlZmF1bHQtcnRkYi5hc2lhLXNvdXRoZWFzdDEuZmlyZWJhc2VkYXRhYmFzZS5hcHAnLA0KICAgIG1lYXN1cmVtZW50SWQ6ICdHLVRTTDBSTDFDSzknLA0KICApOw0KfQ0K' }}
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_B64 || 'ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiMzA4MTYzNzEzODY0IiwKICAgICJmaXJlYmFzZV91cmwiOiAiaHR0cHM6Ly9jbGFzaGNoYXQtNTRkYzAtZGVmYXVsdC1ydGRiLmFzaWEtc291dGhlYXN0MS5maXJlYmFzZWRhdGFiYXNlLmFwcCIsCiAgICAicHJvamVjdF9pZCI6ICJjbGFzaGNoYXQtNTRkYzAiLAogICAgInN0b3JhZ2VfYnVja2V0IjogImNsYXNoY2hhdC01NGRjMC5maXJlYmFzZXN0b3JhZ2UuYXBwIgogIH0sCiAgImNsaWVudCI6IFsKICAgIHsKICAgICAgImNsaWVudF9pbmZvIjogewogICAgICAgICJtb2JpbGVzZGtfYXBwX2lkIjogIjE6MzA4MTYzNzEzODY0OmFuZHJvaWQ6NWJkOGJhOWQ4Y2QzNTBhZDgxMzE3ZCIsCiAgICAgICAgImFuZHJvaWRfY2xpZW50X2luZm8iOiB7CiAgICAgICAgICAicGFja2FnZV9uYW1lIjogImNvbS5TVWNvZGVycy5jbGFzaGNoYXQiCiAgICAgICAgfQogICAgICB9LAogICAgICAib2F1dGhfY2xpZW50IjogWwogICAgICAgIHsKICAgICAgICAgICJjbGllbnRfaWQiOiAiMzA4MTYzNzEzODY0LWdoOHMzMHQ1bHZwMmI2dGh2bzI1bTQyYTFnMmV1MjB1LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwKICAgICAgICAgICJjbGllbnRfdHlwZSI6IDEsCiAgICAgICAgICAiYW5kcm9pZF9pbmZvIjogewogICAgICAgICAgICAicGFja2FnZV9uYW1lIjogImNvbS5TVWNvZGVycy5jbGFzaGNoYXQiLAogICAgICAgICAgICAiY2VydGlmaWNhdGVfaGFzaCI6ICJmZjM4ZDNiN2Y5YTg4MTUwZWQwNGQ5YTdkZjRkYTY4YjY5NWYwYjI2IgogICAgICAgICAgfQogICAgICAgIH0sCiAgICAgICAgewogICAgICAgICAgImNsaWVudF9pZCI6ICIzMDgxNjM3MTM4NjQtZ2hxbGh1dmtwNjIyYWNmdTMwbzNkbHViZDMzcGltY2EuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLAogICAgICAgICAgImNsaWVudF90eXBlIjogMSwKICAgICAgICAgICJhbmRyb2lkX2luZm8iOiB7CiAgICAgICAgICAgICJwYWNrYWdlX25hbWUiOiAiY29tLlNVY29kZXJzLmNsYXNoY2hhdCIsCiAgICAgICAgICAgICJjZXJ0aWZpY2F0ZV9oYXNoIjogImVkYTc0YmUyMGI5YzhlYTg3MmFlN2NiYjdiYjM3ZjVjNzIzZjZlYjEiCiAgICAgICAgICB9CiAgICAgICAgfSwKICAgICAgICB7CiAgICAgICAgICAiY2xpZW50X2lkIjogIjMwODE2MzcxMzg2NC05MzBsdWpiYjUwMzBkMG91OWZnaDJjcjI4YWNtMm8zcC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsCiAgICAgICAgICAiY2xpZW50X3R5cGUiOiAzCiAgICAgICAgfQogICAgICBdLAogICAgICAiYXBpX2tleSI6IFsKICAgICAgICB7CiAgICAgICAgICAiY3VycmVudF9rZXkiOiAiQUl6YVN5QlFNQXNrVE5ZM2M4NTB0TmFqSmstUnA4YjVWc2Q1Rzh3IgogICAgICAgIH0KICAgICAgXSwKICAgICAgInNlcnZpY2VzIjogewogICAgICAgICJhcHBpbnZpdGVfc2VydmljZSI6IHsKICAgICAgICAgICJvdGhlcl9wbGF0Zm9ybV9vYXV0aF9jbGllbnQiOiBbCiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAiY2xpZW50X2lkIjogIjMwODE2MzcxMzg2NC05MzBsdWpiYjUwMzBkMG91OWZnaDJjcjI4YWNtMm8zcC5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsCiAgICAgICAgICAgICAgImNsaWVudF90eXBlIjogMwogICAgICAgICAgICB9CiAgICAgICAgICBdCiAgICAgICAgfQogICAgICB9CiAgICB9CiAgXSwKICAiY29uZmlndXJhdGlvbl92ZXJzaW9uIjogIjEiCn0=' }}
         run: |
           # 1. Restore env file
           echo "APP_SHARED_SECRET=$APP_SHARED_SECRET" > env
 
           # 2. Restore lib/firebase_options.dart
           mkdir -p lib
-          cat << 'EOF' > lib/firebase_options.dart
-          import 'package:firebase_core/firebase_core.dart';
-          import 'package:flutter/foundation.dart'
-              show defaultTargetPlatform, kIsWeb, TargetPlatform;
-
-          class DefaultFirebaseOptions {
-            static FirebaseOptions get currentPlatform {
-              if (kIsWeb) {
-                return web;
-              }
-              switch (defaultTargetPlatform) {
-                case TargetPlatform.android:
-                  return android;
-                case TargetPlatform.iOS:
-                case TargetPlatform.macOS:
-                case TargetPlatform.windows:
-                case TargetPlatform.linux:
-                case TargetPlatform.fuchsia:
-                  throw UnsupportedError(
-                    'DefaultFirebaseOptions have not been configured for this platform - '
-                    'run flutterfire configure to generate platform-specific options.',
-                  );
-              }
-            }
-
-            static const FirebaseOptions android = FirebaseOptions(
-              apiKey: 'AIzaSyBQMAskTNY3c850tNajJk-Rp8b5Vsd5G8w',
-              appId: '1:308163713864:android:5bd8ba9d8cd350ad81317d',
-              messagingSenderId: '308163713864',
-              projectId: 'clashchat-54dc0',
-              storageBucket: 'clashchat-54dc0.firebasestorage.app',
-            );
-
-            static const FirebaseOptions web = FirebaseOptions(
-              apiKey: 'AIzaSyCqb6oxeOMr7gkV-E8brUkzFuebtq0umD0',
-              appId: '1:308163713864:web:ba5dc847410a875281317d',
-              messagingSenderId: '308163713864',
-              projectId: 'clashchat-54dc0',
-              storageBucket: 'clashchat-54dc0.firebasestorage.app',
-              authDomain: 'clashchat-54dc0.firebaseapp.com',
-              databaseURL: 'https://clashchat-54dc0-default-rtdb.asia-southeast1.firebasedatabase.app',
-              measurementId: 'G-TSL0RL1CK9',
-            );
-          }
-          EOF
+          echo "$FB_B64" | base64 -d > lib/firebase_options.dart
 
           # 3. Restore android/app/google-services.json
           mkdir -p android/app
-          cat << 'EOF' > android/app/google-services.json
-          {
-            "project_info": {
-              "project_number": "308163713864",
-              "firebase_url": "https://clashchat-54dc0-default-rtdb.asia-southeast1.firebasedatabase.app",
-              "project_id": "clashchat-54dc0",
-              "storage_bucket": "clashchat-54dc0.firebasestorage.app"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:308163713864:android:5bd8ba9d8cd350ad81317d",
-                  "android_client_info": {
-                    "package_name": "com.SUcoders.clashchat"
-                  }
-                },
-                "oauth_client": [
-                  {
-                    "client_id": "308163713864-gh8s30t5lvp2b6thvo25m42a1g2eu20u.apps.googleusercontent.com",
-                    "client_type": 1,
-                    "android_info": {
-                      "package_name": "com.SUcoders.clashchat",
-                      "certificate_hash": "ff38d3b7f9a88150ed04d9a7df4da68b695f0b26"
-                    }
-                  },
-                  {
-                    "client_id": "308163713864-ghqlhuvkp622acfu30o3dlubd33pimca.apps.googleusercontent.com",
-                    "client_type": 1,
-                    "android_info": {
-                      "package_name": "com.SUcoders.clashchat",
-                      "certificate_hash": "eda74be20b9c8ea872ae7cbb7bb37f5c723f6eb1"
-                    }
-                  },
-                  {
-                    "client_id": "308163713864-930lujbb5030d0ou9fgh2cr28acm2o3p.apps.googleusercontent.com",
-                    "client_type": 3
-                  }
-                ],
-                "api_key": [
-                  {
-                    "current_key": "AIzaSyBQMAskTNY3c850tNajJk-Rp8b5Vsd5G8w"
-                  }
-                ],
-                "services": {
-                  "appinvite_service": {
-                    "other_platform_oauth_client": [
-                      {
-                        "client_id": "308163713864-930lujbb5030d0ou9fgh2cr28acm2o3p.apps.googleusercontent.com",
-                        "client_type": 3
-                      }
-                    }
-                  }
-                }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          EOF
+          echo "$GS_B64" | base64 -d > android/app/google-services.json
 
       - name: Install Dependencies
         run: flutter pub get
