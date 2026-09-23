@@ -136,9 +136,9 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
@@ -183,13 +183,13 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? (d['color'] as Color).withOpacity(0.2)
-                                    : Colors.grey.withOpacity(0.1),
+                                    ? (d['color'] as Color).withValues(alpha: 0.2)
+                                    : Colors.grey.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isSelected
                                       ? d['color'] as Color
-                                      : Colors.grey.withOpacity(0.3),
+                                      : Colors.grey.withValues(alpha: 0.3),
                                   width: isSelected ? 2 : 1,
                                 ),
                               ),
@@ -262,11 +262,11 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                                       padding: const EdgeInsets.symmetric(vertical: 14),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? Colors.blue.withOpacity(0.2)
-                                            : Colors.grey.withOpacity(0.1),
+                                            ? Colors.blue.withValues(alpha: 0.2)
+                                            : Colors.grey.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: isSelected ? Colors.blue : Colors.grey.withOpacity(0.3),
+                                          color: isSelected ? Colors.blue : Colors.grey.withValues(alpha: 0.3),
                                           width: isSelected ? 2 : 1,
                                         ),
                                       ),
@@ -296,11 +296,11 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                                       padding: const EdgeInsets.symmetric(vertical: 14),
                                       decoration: BoxDecoration(
                                         color: (_timerMinutes != null && ![5, 10, 15].contains(_timerMinutes))
-                                            ? Colors.blue.withOpacity(0.2)
-                                            : Colors.grey.withOpacity(0.1),
+                                            ? Colors.blue.withValues(alpha: 0.2)
+                                            : Colors.grey.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.grey.withOpacity(0.3),
+                                          color: Colors.grey.withValues(alpha: 0.3),
                                         ),
                                       ),
                                       child: Column(
@@ -422,9 +422,9 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -478,8 +478,8 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? (d['color'] as Color).withOpacity(0.2)
-                            : AppColors.surf(isDark).withOpacity(0.5),
+                            ? (d['color'] as Color).withValues(alpha: 0.2)
+                            : AppColors.surf(isDark).withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
@@ -550,7 +550,7 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                   _timerEnabled = val;
                   if (val) _timerMinutes = 10; // default
                 }),
-                activeColor: AppColors.primary,
+                activeTrackColor: AppColors.primary,
               ),
               if (_timerEnabled) ...[
                 const SizedBox(height: 12),
@@ -566,8 +566,8 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? Colors.blue.withOpacity(0.2)
-                                : AppColors.surf(isDark).withOpacity(0.5),
+                                ? Colors.blue.withValues(alpha: 0.2)
+                                : AppColors.surf(isDark).withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isSelected ? Colors.blue : AppColors.border(isDark),
@@ -601,8 +601,8 @@ class _DebateSetupScreenState extends State<DebateSetupScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             decoration: BoxDecoration(
                               color: (_timerMinutes != null && ![5, 10, 15].contains(_timerMinutes))
-                                  ? Colors.blue.withOpacity(0.2)
-                                  : AppColors.surf(isDark).withOpacity(0.5),
+                                  ? Colors.blue.withValues(alpha: 0.2)
+                                  : AppColors.surf(isDark).withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: AppColors.border(isDark),

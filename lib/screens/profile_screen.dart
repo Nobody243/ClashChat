@@ -61,11 +61,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'bio': _bioCtrl.text.trim(),
       });
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _saving = false;
         _editMode = false;
       });
+    }
   }
 
   Future<void> _signOut() async {
@@ -159,9 +160,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final losses = totalDebates - wins;
                 final avgScore = totalDebates == 0
                     ? 0
-                    : (debates.fold<int>(0, (sum, d) {
+                    : (debates.fold<int>(0, (acc, d) {
                                 final data = d.data() as Map<String, dynamic>;
-                                return sum + ((data['score'] ?? 0) as int);
+                                return acc + ((data['score'] ?? 0) as int);
                               }) /
                               totalDebates)
                           .round();
@@ -209,12 +210,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     : null,
                                 color: _editMode
                                     ? null
-                                    : AppColors.primary.withOpacity(0.12),
+                                    : AppColors.primary.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(22),
                                 border: Border.all(
                                   color: _editMode
                                       ? Colors.transparent
-                                      : AppColors.primary.withOpacity(0.4),
+                                      : AppColors.primary.withValues(alpha: 0.4),
                                 ),
                               ),
                               child: _saving
@@ -313,10 +314,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.08),
+                          color: Colors.amber.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.amber.withOpacity(0.3),
+                            color: Colors.amber.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -397,7 +398,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: _editMode
-                                ? AppColors.primary.withOpacity(0.5)
+                                ? AppColors.primary.withValues(alpha: 0.5)
                                 : AppColors.border(isDark),
                             width: _editMode ? 1.5 : 1,
                           ),
@@ -498,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.error,
                                 side: BorderSide(
-                                  color: AppColors.error.withOpacity(0.5),
+                                  color: AppColors.error.withValues(alpha: 0.5),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -586,13 +587,13 @@ class _RankCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [rankColor.withOpacity(0.4), rankColor.withOpacity(0.1)],
+          colors: [rankColor.withValues(alpha: 0.4), rankColor.withValues(alpha: 0.1)],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: rankColor.withOpacity(0.4), width: 1.5),
+        border: Border.all(color: rankColor.withValues(alpha: 0.4), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: rankColor.withOpacity(0.2),
+            color: rankColor.withValues(alpha: 0.2),
             blurRadius: 20,
             spreadRadius: -4,
             offset: const Offset(0, 8),
@@ -614,9 +615,9 @@ class _RankCard extends StatelessWidget {
                       height: 72,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: rankColor.withOpacity(0.2),
+                        color: rankColor.withValues(alpha: 0.2),
                         border: Border.all(
-                          color: rankColor.withOpacity(0.5),
+                          color: rankColor.withValues(alpha: 0.5),
                           width: 2,
                         ),
                       ),
@@ -632,7 +633,7 @@ class _RankCard extends StatelessWidget {
                                     strokeWidth: 2,
                                   ),
                                 ),
-                                errorBuilder: (_, __, ___) => const Icon(
+                                errorBuilder: (_, _, _) => const Icon(
                                   Icons.person_rounded,
                                   color: Colors.white,
                                   size: 38,
@@ -656,7 +657,7 @@ class _RankCard extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: rankColor.withOpacity(0.4),
+                            color: rankColor.withValues(alpha: 0.4),
                             blurRadius: 6,
                           ),
                         ],
@@ -716,9 +717,9 @@ class _RankCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: rankColor.withOpacity(0.3),
+                        color: rankColor.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: rankColor.withOpacity(0.6)),
+                        border: Border.all(color: rankColor.withValues(alpha: 0.6)),
                       ),
                       child: Text(
                         '${rankData['name']}',
@@ -769,7 +770,7 @@ class _RankCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: rankProgress,
                   minHeight: 10,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               ),
@@ -818,9 +819,9 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           children: [
@@ -838,7 +839,7 @@ class _StatBox extends StatelessWidget {
               label,
               style: GoogleFonts.poppins(
                 fontSize: 10,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -952,7 +953,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,
-        color: textPrimary.withOpacity(0.45),
+        color: textPrimary.withValues(alpha: 0.45),
       ),
     ).animate(delay: delay.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1);
   }
@@ -983,7 +984,7 @@ class _SettingsTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap ?? () {},
         borderRadius: BorderRadius.circular(14),
-        splashColor: AppColors.primary.withOpacity(0.08),
+        splashColor: AppColors.primary.withValues(alpha: 0.08),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -996,7 +997,7 @@ class _SettingsTile extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: AppColors.primary, size: 20),

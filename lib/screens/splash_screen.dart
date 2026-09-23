@@ -173,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen>
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: shockwaveAnim,
-                builder: (_, __) => CustomPaint(
+                builder: (_, _) => CustomPaint(
                   painter: ShockwavePainter(
                     progress: shockwaveAnim.value,
                     center: Offset(screenWidth / 2, botCenterY),
@@ -189,7 +189,7 @@ class _SplashScreenState extends State<SplashScreen>
               right: 0,
               child: AnimatedBuilder(
                 animation: _mainCtrl,
-                builder: (_, __) => FadeTransition(
+                builder: (_, _) => FadeTransition(
                   opacity: botOpacity,
                   child: ScaleTransition(
                     scale: botScale,
@@ -218,7 +218,7 @@ class _SplashScreenState extends State<SplashScreen>
               right: 0,
               child: AnimatedBuilder(
                 animation: _mainCtrl,
-                builder: (_, __) => Stack(
+                builder: (_, _) => Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.center,
                   children: [
@@ -276,7 +276,7 @@ class _SplashScreenState extends State<SplashScreen>
               right: 0,
               child: AnimatedBuilder(
                 animation: _mainCtrl,
-                builder: (_, __) => Transform.translate(
+                builder: (_, _) => Transform.translate(
                   offset: Offset(0, taglineSlide.value),
                   child: Opacity(
                     opacity: taglineOpacity.value,
@@ -302,7 +302,7 @@ class _SplashScreenState extends State<SplashScreen>
               right: 0,
               child: AnimatedBuilder(
                 animation: _mainCtrl,
-                builder: (_, __) => CustomPaint(
+                builder: (_, _) => CustomPaint(
                   painter: UnderlinePainter(
                     progress: underlineAnim.value,
                     center: Offset(screenWidth / 2, 0),
@@ -337,7 +337,7 @@ class ShockwavePainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = const Color(0xFF7F77DD).withOpacity(opacity * 0.6),
+        ..color = const Color(0xFF7F77DD).withValues(alpha: opacity * 0.6),
     );
     // Inner ring
     if (progress > 0.15) {
@@ -350,7 +350,7 @@ class ShockwavePainter extends CustomPainter {
           ..strokeWidth = 0.8
           ..color = const Color(
             0xFF7F77DD,
-          ).withOpacity((1.0 - (progress - 0.15)).clamp(0.0, 1.0) * 0.3),
+          ).withValues(alpha: (1.0 - (progress - 0.15)).clamp(0.0, 1.0) * 0.3),
       );
     }
   }
@@ -372,7 +372,7 @@ class SparkPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..color = const Color(
         0xFFCECBF6,
-      ).withOpacity((1 - progress).clamp(0.0, 1.0));
+      ).withValues(alpha: (1 - progress).clamp(0.0, 1.0));
     final length = 12.0 * progress;
     final angles = [0, 45, 90, 135, 180, 225, 270, 315];
     for (final deg in angles) {

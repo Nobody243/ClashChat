@@ -29,7 +29,7 @@ class AvatarCard extends StatelessWidget {
             width: 3,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: color.withOpacity(0.35), blurRadius: 12)]
+              ? [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 12)]
               : [],
         ),
         child: ClipRRect(

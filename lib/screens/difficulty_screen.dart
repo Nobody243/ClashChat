@@ -91,7 +91,7 @@ class _DifficultyScreenState extends State<DifficultyScreen>
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: AppColors.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -197,9 +197,9 @@ class _DifficultyScreenState extends State<DifficultyScreen>
                           vertical: isMobile ? 14 : 16,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           border: Border.all(
-                            color: AppColors.primary.withOpacity(0.25),
+                            color: AppColors.primary.withValues(alpha: 0.25),
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(14),
@@ -303,7 +303,7 @@ class _DifficultyCardState extends State<_DifficultyCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           transform: _isHovering
-              ? (Matrix4.identity()..scale(1.02))
+              ? (Matrix4.diagonal3Values(1.02, 1.02, 1.0))
               : Matrix4.identity(),
           child:
               Container(
@@ -312,28 +312,28 @@ class _DifficultyCardState extends State<_DifficultyCard> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          widget.color.withOpacity(0.1),
-                          widget.color.withOpacity(0.03),
+                          widget.color.withValues(alpha: 0.1),
+                          widget.color.withValues(alpha: 0.03),
                         ],
                       ),
                       border: Border.all(
                         color: _isHovering
-                            ? widget.color.withOpacity(0.7)
-                            : widget.color.withOpacity(0.35),
+                            ? widget.color.withValues(alpha: 0.7)
+                            : widget.color.withValues(alpha: 0.35),
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: _isHovering
                           ? [
                               BoxShadow(
-                                color: widget.color.withOpacity(0.2),
+                                color: widget.color.withValues(alpha: 0.2),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               ),
                             ]
                           : [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -349,7 +349,7 @@ class _DifficultyCardState extends State<_DifficultyCard> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: widget.color.withOpacity(0.15),
+                                color: widget.color.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
@@ -401,7 +401,7 @@ class _DifficultyCardState extends State<_DifficultyCard> {
                           children: [
                             Icon(
                               Icons.arrow_forward_rounded,
-                              color: widget.color.withOpacity(0.5),
+                              color: widget.color.withValues(alpha: 0.5),
                               size: 18,
                             ),
                             const SizedBox(width: 6),
@@ -410,7 +410,7 @@ class _DifficultyCardState extends State<_DifficultyCard> {
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: widget.color.withOpacity(0.7),
+                                color: widget.color.withValues(alpha: 0.7),
                               ),
                             ),
                           ],

@@ -342,10 +342,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   // Filter based on active tab and filter options
                   final filtered = records.where((r) {
-                    if (r.mode != _selectedMode) return false;
-                    if (_stanceFilter != 'All' && r.stance != _stanceFilter)
+                    if (r.mode != _selectedMode) {
                       return false;
-                    if (r.score < _minScore) return false;
+                    }
+                    if (_stanceFilter != 'All' && r.stance != _stanceFilter) {
+                      return false;
+                    }
+                    if (r.score < _minScore) {
+                      return false;
+                    }
                     return true;
                   }).toList();
 
@@ -369,7 +374,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   vertical: 8,
                                 ),
                                 itemCount: filtered.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const SizedBox(height: 16),
                                 itemBuilder: (context, index) {
                                   final record = filtered[index];
@@ -504,8 +509,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final total = records.length;
       final avgScore = total == 0
           ? 0
-          : (records.fold(0, (sum, r) => sum + r.score) / total).round();
-      final totalTime = records.fold(0, (sum, r) => sum + r.durationMinutes);
+          : (records.fold(0, (acc, r) => acc + r.score) / total).round();
+      final totalTime = records.fold(0, (acc, r) => acc + r.durationMinutes);
 
       return Row(
         children: [

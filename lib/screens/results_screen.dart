@@ -162,10 +162,10 @@ class _ResultsScreenState extends State<ResultsScreen>
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _getModeColor(widget.mode).withOpacity(0.2),
+              color: _getModeColor(widget.mode).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _getModeColor(widget.mode).withOpacity(0.5),
+                color: _getModeColor(widget.mode).withValues(alpha: 0.5),
               ),
             ),
             child: Row(
@@ -325,10 +325,10 @@ class _ResultsScreenState extends State<ResultsScreen>
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: _scoreColor.withOpacity(0.15),
+                            color: _scoreColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: _scoreColor.withOpacity(0.5),
+                              color: _scoreColor.withValues(alpha: 0.5),
                             ),
                           ),
                           child: Text(
@@ -371,10 +371,10 @@ class _ResultsScreenState extends State<ResultsScreen>
                         padding: const EdgeInsets.all(16),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: AppColors.primary.withOpacity(0.25),
+                            color: AppColors.primary.withValues(alpha: 0.25),
                           ),
                         ),
                         child: Row(
@@ -556,7 +556,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: msg.isUser
-                                          ? AppColors.primary.withOpacity(0.15)
+                                          ? AppColors.primary.withValues(alpha: 0.15)
                                           : Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -584,7 +584,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFF0F6E56,
-                                              ).withOpacity(0.15),
+                                              ).withValues(alpha: 0.15),
                                               border: Border(
                                                 left: BorderSide(
                                                   color: Color(0xFF0F6E56),
@@ -745,10 +745,10 @@ class _RankedPointsBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.2), color.withOpacity(0.05)],
+          colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.05)],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -756,7 +756,7 @@ class _RankedPointsBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -790,9 +790,9 @@ class _RankedPointsBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withOpacity(0.5)),
+              border: Border.all(color: color.withValues(alpha: 0.5)),
             ),
             child: Text(
               '$sign$pointsEarned pts',
@@ -822,9 +822,9 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,

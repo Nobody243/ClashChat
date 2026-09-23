@@ -31,7 +31,7 @@ class UserAvatar extends StatelessWidget {
           height: size,
           color: Colors.grey.shade200,
         ),
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           width: size,
           height: size,
           color: Colors.grey.shade200,

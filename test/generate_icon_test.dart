@@ -19,6 +19,6 @@ void main() {
     final pngBytes = byteData!.buffer.asUint8List();
     
     File('assets/icon.png').writeAsBytesSync(pngBytes);
-    print('Generated assets/icon.png');
+    // icon generated
   });
 }

@@ -82,13 +82,13 @@ class RankedSetupScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Color(rankData['color'] as int).withOpacity(0.3),
-                            Color(rankData['color'] as int).withOpacity(0.1),
+                            Color(rankData['color'] as int).withValues(alpha: 0.3),
+                            Color(rankData['color'] as int).withValues(alpha: 0.1),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Color(rankData['color'] as int).withOpacity(0.5),
+                          color: Color(rankData['color'] as int).withValues(alpha: 0.5),
                         ),
                       ),
                       child: Column(
@@ -112,7 +112,7 @@ class RankedSetupScreen extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: progress,
                               minHeight: 8,
-                              backgroundColor: Colors.grey.withOpacity(0.3),
+                              backgroundColor: Colors.grey.withValues(alpha: 0.3),
                               valueColor: AlwaysStoppedAnimation(
                                 Color(rankData['color'] as int)),
                             ),
@@ -146,7 +146,7 @@ class RankedSetupScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -291,13 +291,13 @@ class RankedSetupScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(rankData['color'] as int).withOpacity(0.3),
-                      Color(rankData['color'] as int).withOpacity(0.1),
+                      Color(rankData['color'] as int).withValues(alpha: 0.3),
+                      Color(rankData['color'] as int).withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color(rankData['color'] as int).withOpacity(0.5),
+                    color: Color(rankData['color'] as int).withValues(alpha: 0.5),
                   ),
                 ),
                 child: Column(
@@ -323,7 +323,7 @@ class RankedSetupScreen extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 8,
-                        backgroundColor: Colors.grey.withOpacity(0.3),
+                        backgroundColor: Colors.grey.withValues(alpha: 0.3),
                         valueColor: AlwaysStoppedAnimation(
                           Color(rankData['color'] as int)),
                       ),
